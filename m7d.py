@@ -29,6 +29,7 @@ try:
     if r.status_code == 200:
         info = r.json()
         print("Connected as: " + info["username"])
+        print("Token is valid!")
     else:
         print("Invalid token!")
         sys.exit(1)
@@ -56,14 +57,20 @@ class XeroSimple:
             return None
 
     def check_guild(self):
-        print("Checking guild...")
+        print("Checking guild " + self.guild_id + "...")
         r = self.api_call("get", "https://discord.com/api/v10/guilds/" + self.guild_id)
         if r and r.status_code == 200:
             guild = r.json()
             print("Guild found: " + guild["name"])
             return True
+        elif r and r.status_code == 403:
+            print("Bot is NOT in this guild!")
+            return False
+        elif r and r.status_code == 404:
+            print("Guild not found!")
+            return False
         else:
-            print("Bot not in guild or invalid ID!")
+            print("Cannot access guild!")
             return False
 
     def get_all_channels(self):
@@ -71,7 +78,7 @@ class XeroSimple:
         if r and r.status_code == 200:
             channels = r.json()
             text_channels = [c for c in channels if c["type"] == 0]
-            print("Found " + str(len(text_channels)) + " channels")
+            print("Found " + str(len(text_channels)) + " text channels")
             return text_channels
         return []
 
@@ -131,7 +138,7 @@ class XeroSimple:
         self.spam_count = 0
         threading.Thread(target=self.spam_all_channels, args=(message,), daemon=True).start()
         while self.spamming:
-            sys.stdout.write("\rMessages sent: " + str(self.spam_count))
+            sys.stdout.write("\rMessages sent: " + str(self.spam_count) + "   ")
             sys.stdout.flush()
             time.sleep(1)
 
@@ -167,14 +174,18 @@ class XeroSimple:
     def menu(self):
         while True:
             os.system("clear")
-            print("XERO SIMPLE - TARGET: " + self.guild_id)
             print("=" * 30)
+            print("XERO SIMPLE - iSH EDITION")
+            print("TARGET: " + self.guild_id)
+            print("=" * 30)
+            print("")
             print("[1] DELETE ALL CHANNELS")
             print("[2] SPAM ALL CHANNELS")
             print("[3] CREATE CHANNELS")
             print("[4] SHOW INVITE LINK")
             print("[5] CHANGE TARGET")
             print("[6] EXIT")
+            print("")
             print("=" * 30)
             
             choice = input("XERO > ")
@@ -183,30 +194,35 @@ class XeroSimple:
                 confirm = input("ARE YOU SURE? (yes/no): ")
                 if confirm.lower() == "yes":
                     self.delete_all_channels()
-                input("PRESS ENTER")
+                input("\nPRESS ENTER TO CONTINUE")
                 
             elif choice == "2":
-                message = input("MESSAGE: ") or "@everyone XERO WAS HERE"
+                message = input("SPAM MESSAGE: ")
+                if not message:
+                    message = "@everyone XERO WAS HERE"
                 self.start_spam(message)
                 input()
                 self.stop_spam()
                 
             elif choice == "3":
-                name = input("NAME: ") or "XERO-OWNED"
+                name = input("CHANNEL NAME: ")
+                if not name:
+                    name = "XERO-OWNED"
                 try:
                     amount = int(input("HOW MANY: "))
                 except:
                     amount = 20
                 self.create_channels(name, amount)
-                input("PRESS ENTER")
+                input("\nPRESS ENTER TO CONTINUE")
                 
             elif choice == "4":
                 invite = self.get_invite()
                 if invite:
-                    print("INVITE: " + invite)
+                    print("\nINVITE LINK:")
+                    print(invite)
                 else:
-                    print("Failed!")
-                input("PRESS ENTER")
+                    print("\nFailed to get invite link!")
+                input("\nPRESS ENTER TO CONTINUE")
                 
             elif choice == "5":
                 return "change"
@@ -215,29 +231,40 @@ class XeroSimple:
                 print("BYE!")
                 return "exit"
 
-print("Ready!")
+print("")
+print("=" * 30)
+print("READY!")
+print("=" * 30)
+print("")
 
 while True:
-    guild_id = input("GUILD ID (or exit): ").strip()
+    guild_id = input("ENTER GUILD ID (or exit): ").strip()
     
     if guild_id.lower() == "exit":
         print("Goodbye!")
         sys.exit(0)
     
     if not guild_id.isdigit():
-        print("Invalid guild ID!")
+        print("Invalid guild ID! Numbers only.\n")
         continue
     
+    print("")
     xero = XeroSimple(guild_id, token)
     
     if xero.check_guild():
+        print("Access granted! Opening menu...\n")
+        time.sleep(1)
         result = xero.menu()
         if result == "exit":
             sys.exit(0)
+        if result == "change":
+            print("\n")
+            continue
     else:
-        print("Add bot to guild first!")
+        print("\nBot cannot access this guild!")
         invite = xero.get_invite()
         if invite:
-            print("Invite link: " + invite)
-        print("")
+            print("Use this invite link to add the bot:")
+            print(invite)
+        print("\n")
 ENDOFFILE
