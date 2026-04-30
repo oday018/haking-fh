@@ -1,7 +1,4 @@
-"""
-XERO SIMPLE - iSH EDITION
-JUST WHAT YOU NEED
-"""
+
 import os
 import sys
 import time
